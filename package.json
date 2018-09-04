@@ -1,0 +1,31 @@
+{
+  "name": "npm-merge-driver-install",
+  "version": "0.0.0",
+  "main": "index.js",
+  "description": "A package to install npm-merge-driver locally and automatically.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/brandonocasey/npm-merge-driver-install"
+  },
+  "author": "Brandon Casey <brandonocasey@gmail.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/brandonocasey/npm-merge-driver-install/issues"
+  },
+  "homepage": "https://github.com/brandonocasey/npm-merge-driver-install",
+  "scripts": {
+    "install": "node index.js",
+    "test": "ava test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "dependencies": {
+    "is-ci": "^1.2.0",
+    "npm-merge-driver": "^2.3.5"
+  },
+  "devDependencies": {
+    "ava": "^1.0.0-beta.8",
+    "shelljs": "^0.8.2",
+    "uuid": "^3.3.2"
+  }
+}
