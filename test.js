@@ -81,7 +81,7 @@ test.before((t) => {
 });
 
 test.beforeEach((t) => {
-  t.context.dir = getTempDir()
+  t.context.dir = getTempDir();
   shell.cp('-R', t.context.template, t.context.dir);
 
   t.context.link = function(env = {}) {
@@ -99,7 +99,7 @@ test.afterEach.always((t) => {
 
 test.after.always((t) => {
   shell.rm('-rf', t.context.template);
-})
+});
 
 test('does not install without .git', (t) => {
   shell.rm('-rf', path.join(t.context.dir, '.git'));
