@@ -24,7 +24,7 @@ if (typeof process.env.NPM_MERGE_DRIVER_SKIP_INSTALL !== 'undefined') {
   process.exit(0);
 }
 
-console.log('installing npm-merge-dirver');
+console.log('installing npm-merge-driver');
 
 const result = spawnSync('npm-merge-driver', ['install'], {cwd: rootDir, stdio: 'inherit'});
 
