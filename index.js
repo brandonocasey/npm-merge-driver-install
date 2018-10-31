@@ -1,10 +1,20 @@
+#!/usr/bin/env node
+
 /* eslint-disable no-console */
 const isCI = require('is-ci');
 const path = require('path');
 const fs = require('fs');
 const spawnSync = require('child_process').spawnSync;
+const npmMergeDriver = require.resolve('npm-merge-driver');
+const findRoot = require('find-root');
 
-const rootDir = process.env.INIT_CWD;
+let rootDir;
+
+if (process.env.INIT_CWD) {
+  rootDir = process.env.INIT_CWD;
+} else {
+  rootDir = findRoot(process.cwd());
+}
 
 console.log('npm-merge-driver-install');
 console.log(rootDir);
@@ -26,6 +36,6 @@ if (typeof process.env.NPM_MERGE_DRIVER_SKIP_INSTALL !== 'undefined') {
 
 console.log('installing npm-merge-driver');
 
-const result = spawnSync('npm-merge-driver', ['install'], {cwd: rootDir, stdio: 'inherit'});
+const result = spawnSync(npmMergeDriver, ['install'], {cwd: rootDir, stdio: 'inherit'});
 
 process.exit(result.status);

@@ -18,6 +18,7 @@
     "node": ">=8"
   },
   "dependencies": {
+    "find-root": "^1.1.0",
     "is-ci": "^1.2.0",
     "npm-merge-driver": "^2.3.5"
   },

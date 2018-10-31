@@ -37,19 +37,23 @@ const promiseSpawn = function(bin, args, options = {}) {
     let stderr = '';
     let out = '';
 
-    child.stdout.on('data', function(chunk) {
-      const str = chunk.toString();
+    if (child.stdout) {
+      child.stdout.on('data', function(chunk) {
+        const str = chunk.toString();
 
-      out += str;
-      stdout += str;
-    });
+        out += str;
+        stdout += str;
+      });
+    }
 
-    child.stderr.on('data', function(chunk) {
-      const str = chunk.toString();
+    if (child.stderr) {
+      child.stderr.on('data', function(chunk) {
+        const str = chunk.toString();
 
-      out += str;
-      stderr += str;
-    });
+        out += str;
+        stderr += str;
+      });
+    }
     const kill = () => child.kill();
 
     process.on('SIGINT', kill);
@@ -129,6 +133,12 @@ test('installs with .git', (t) => {
 
 test('installs in ci if NPM_MERGE_DRIVER_IGNORE_CI=true', (t) => {
   return t.context.link({TRAVIS: 'some-value', NPM_MERGE_DRIVER_IGNORE_CI: 'some-value'}).then(function(result) {
+    t.true(isInstalled(t.context.dir));
+  });
+});
+
+test('installs in cwd if run as binary', (t) => {
+  return promiseSpawn('node', [path.join(BASE_DIR, 'index.js')], {cwd: t.context.dir, env: {PATH: process.env.PATH}}).then(function(result) {
     t.true(isInstalled(t.context.dir));
   });
 });
