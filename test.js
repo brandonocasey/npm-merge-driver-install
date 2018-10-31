@@ -138,7 +138,16 @@ test('installs in ci if NPM_MERGE_DRIVER_IGNORE_CI=true', (t) => {
 });
 
 test('installs in cwd if run as binary', (t) => {
-  return promiseSpawn('node', [path.join(BASE_DIR, 'index.js')], {cwd: t.context.dir, env: {PATH: process.env.PATH}}).then(function(result) {
+  return promiseSpawn(path.join(BASE_DIR, 'index.js'), [], {cwd: t.context.dir, env: {PATH: process.env.PATH}}).then(function(result) {
+    t.true(isInstalled(t.context.dir));
+  });
+});
+
+test('Can install after npm install with binary', (t) => {
+  return t.context.link({NPM_MERGE_DRIVER_SKIP_INSTALL: 'some-value'}).then(function(result) {
+    t.false(isInstalled(t.context.dir));
+    return promiseSpawn('npm-merge-driver-install', [], {cwd: t.context.dir, env: {PATH: process.env.PATH}});
+  }).then(function(retult) {
     t.true(isInstalled(t.context.dir));
   });
 });
