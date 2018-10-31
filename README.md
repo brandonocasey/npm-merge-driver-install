@@ -1,4 +1,7 @@
 # npm-merge-driver-install
+
+[![Greenkeeper badge](https://badges.greenkeeper.io/BrandonOCasey/npm-merge-driver-install.svg)](https://greenkeeper.io/)
+
 A package to automatically install [npm-merge-driver](https://www.npmjs.com/package/npm-merge-driver) when possible.
 
 ## Installation
