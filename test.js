@@ -85,7 +85,7 @@ test.beforeEach((t) => {
   shell.cp('-R', t.context.template, t.context.dir);
 
   t.context.link = function(env = {}) {
-    return promiseSpawn('npm', ['link', BASE_DIR], {
+    return promiseSpawn('npm', ['install', BASE_DIR], {
       cwd: t.context.dir,
       env: Object.assign({PATH: process.env.PATH}, env)
     });
