@@ -47,7 +47,7 @@
     "husky": "^1.1.1",
     "lint-staged": "^8.0.4",
     "not-prerelease": "^1.0.1",
-    "videojs-generator-verify": "~1.1.0",
+    "videojs-generator-verify": "~1.2.0",
     "videojs-standard": "^8.0.2"
   },
   "husky": {
