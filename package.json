@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "find-root": "^1.1.0",
-    "is-ci": "^1.2.0",
+    "is-ci": "^2.0.0",
     "npm-merge-driver": "^2.3.5"
   },
   "scripts": {
