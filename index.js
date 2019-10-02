@@ -5,15 +5,20 @@ const isCI = require('is-ci');
 const path = require('path');
 const fs = require('fs');
 const spawnSync = require('child_process').spawnSync;
+const execSync = require('child_process').execSync;
 const npmMergeDriver = require.resolve('npm-merge-driver');
-const findRoot = require('find-root');
+
+const findGitRoot = function(workingDir) {
+  // Get the git root directory and strip any newlines
+  return execSync('git rev-parse --show-toplevel', {cwd: workingDir}).toString().replace(/(\r\n|\n|\r)/gm, '');
+};
 
 let rootDir;
 
 if (process.env.INIT_CWD) {
-  rootDir = process.env.INIT_CWD;
+  rootDir = findGitRoot(process.env.INIT_CWD);
 } else {
-  rootDir = findRoot(process.cwd());
+  rootDir = findGitRoot(process.cwd());
 }
 
 console.log('npm-merge-driver-install');
