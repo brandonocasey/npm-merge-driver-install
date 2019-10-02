@@ -9,8 +9,16 @@ const execSync = require('child_process').execSync;
 const npmMergeDriver = require.resolve('npm-merge-driver');
 
 const findGitRoot = function(workingDir) {
-  // Get the git root directory and strip any newlines
-  return execSync('git rev-parse --show-toplevel', {cwd: workingDir}).toString().replace(/(\r\n|\n|\r)/gm, '');
+  try {
+    // Get the git root directory and strip any newlines
+    return execSync('git rev-parse --show-toplevel', {cwd: workingDir}).toString().replace(/(\r\n|\n|\r)/gm, '');
+  } catch (error) {
+    // the above git command will throw an error if not inside a working tree
+    // Most likely a localized version of the following string:
+    // "fatal: not a git repository (or any of the parent directories): .git"
+    console.log(error.message);
+    process.exit(0);
+  }
 };
 
 let rootDir;
