@@ -39,7 +39,7 @@
   },
   "devDependencies": {
     "ava": "^1.0.0-beta.8",
-    "shelljs": "^0.8.2",
+    "shelljs": "^0.8.4",
     "uuid": "^3.3.2",
     "conventional-changelog-cli": "^2.0.1",
     "conventional-changelog-videojs": "^3.0.0",
