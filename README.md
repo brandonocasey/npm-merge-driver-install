@@ -3,7 +3,7 @@
 [![Build Status](https://travis-ci.org/BrandonOCasey/npm-merge-driver-install.svg?branch=master)](https://travis-ci.org/BrandonOCasey/npm-merge-driver-install)
 [![Greenkeeper badge](https://badges.greenkeeper.io/BrandonOCasey/npm-merge-driver-install.svg)](https://greenkeeper.io/)
 
-A package to automatically install [npm-merge-driver](https://www.npmjs.com/package/npm-merge-driver) when possible.
+A package to automatically merge package-lock.json conflicts. Heavily based on [npm-merge-driver](https://www.npmjs.com/package/npm-merge-driver) with automated setup at package install time and a single small dependency for ci checking.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -32,7 +32,7 @@ It will install when the package is installed if:
 3. The [`NPM_MERGE_DRIVER_SKIP_INSTALL`](###NPM_MERGE_DRIVER_SKIP_INSTALL) option is not in use.
 
 ## Cli usage
-It can also be installed by running the provided binary (`npm-merge-driver-install`) although the rules abov about when it will install still apply.
+It can also be installed by running the provided binary (`npm-merge-driver-install`) although the rules above about when it will install still apply.
 
 ## Options
 Options are passed through as command line environment variables

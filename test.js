@@ -1,8 +1,8 @@
-import test from 'ava';
-import childProcess from 'child_process';
-import path from 'path';
-import shell from 'shelljs';
-import uuid from 'uuid';
+const test = require('ava');
+const childProcess = require('child_process');
+const path = require('path');
+const shell = require('shelljs');
+const uuid = require('uuid');
 
 const BASE_DIR = path.join(__dirname);
 const TEMP_DIR = shell.tempdir();
@@ -13,14 +13,21 @@ const getTempDir = function() {
 
 const isInstalled = function(dir) {
   const gitConfigPath = path.join(dir, '.git', 'config');
+  const gitAttrPath = path.join(dir, '.git', 'info', 'attributes');
 
   if (!shell.test('-f', gitConfigPath)) {
     return false;
   }
 
-  const str = shell.cat(gitConfigPath);
+  const config = shell.cat(gitConfigPath);
 
-  if (!(/npm-merge-driver/i).test(str)) {
+  if (!(/npm-merge-driver-install/i).test(config)) {
+    return false;
+  }
+
+  const attr = shell.cat(gitAttrPath);
+
+  if (!(/npm-merge-driver-install/i).test(attr)) {
     return false;
   }
 
@@ -138,7 +145,7 @@ test('installs in ci if NPM_MERGE_DRIVER_IGNORE_CI=true', (t) => {
 });
 
 test('installs in cwd if run as binary', (t) => {
-  return promiseSpawn(path.join(BASE_DIR, 'index.js'), [], {cwd: t.context.dir, env: {PATH: process.env.PATH}}).then(function(result) {
+  return promiseSpawn(path.join(BASE_DIR, 'src', 'install.js'), [], {cwd: t.context.dir, env: {PATH: process.env.PATH}}).then(function(result) {
     t.true(isInstalled(t.context.dir));
   });
 });
