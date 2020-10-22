@@ -1,3 +1,22 @@
+<a name="2.0.0"></a>
+# [2.0.0](https://github.com/brandonocasey/npm-merge-driver-install/compare/v1.1.1...v2.0.0) (2020-10-22)
+
+### Features
+
+* remove most dependencies to prevent security issues ([ce8eccf](https://github.com/brandonocasey/npm-merge-driver-install/commit/ce8eccf))
+
+### Chores
+
+* fix travis ([20dc4e5](https://github.com/brandonocasey/npm-merge-driver-install/commit/20dc4e5))
+* **package:** update dependencies to enable Greenkeeper 🌴 ([#7](https://github.com/brandonocasey/npm-merge-driver-install/issues/7)) ([84ab239](https://github.com/brandonocasey/npm-merge-driver-install/commit/84ab239))
+* **package:** update videojs-generator-verify to version 1.2.0 ([#5](https://github.com/brandonocasey/npm-merge-driver-install/issues/5)) ([84a52a6](https://github.com/brandonocasey/npm-merge-driver-install/commit/84a52a6))
+
+
+### BREAKING CHANGES
+
+* We no longer use npm-merge-driver under the hood.
+Instead we use scripts that do the same thing.
+
 <a name="1.1.1"></a>
 ## [1.1.1](https://github.com/brandonocasey/npm-merge-driver-install/compare/v1.1.0...v1.1.1) (2018-10-31)
 
