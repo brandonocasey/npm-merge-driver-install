@@ -59,6 +59,7 @@ if (fs.existsSync(attrFile)) {
 if (attrContents && !attrContents.match(/[\n\r]$/g)) {
   attrContents = '\n';
 }
+attrContents += 'package.json merge=npm-merge-driver-install\n';
 attrContents += 'npm-shrinkwrap.json merge=npm-merge-driver-install\n';
 attrContents += 'package-lock.json merge=npm-merge-driver-install\n';
 
