@@ -1,8 +1,8 @@
 const test = require('ava');
-const childProcess = require('child_process');
 const path = require('path');
 const shell = require('shelljs');
 const uuid = require('uuid');
+const spawnPromise = require('@brandonocasey/spawn-promise');
 
 const BASE_DIR = path.join(__dirname);
 const TEMP_DIR = shell.tempdir();
@@ -35,44 +35,17 @@ const isInstalled = function(dir) {
 };
 
 const promiseSpawn = function(bin, args, options = {}) {
-  return new Promise((resolve, reject) => {
-    options = Object.assign({shell: true, stdio: 'pipe'}, options);
+  const ignoreExitCode = options.ignoreExitCode;
 
-    const child = childProcess.spawn(bin, args, options);
+  delete options.ignoreExitCode;
+  options = Object.assign({shell: true, stdio: 'pipe', encoding: 'utf8'}, options);
 
-    let stdout = '';
-    let stderr = '';
-    let out = '';
-
-    if (child.stdout) {
-      child.stdout.on('data', function(chunk) {
-        const str = chunk.toString();
-
-        out += str;
-        stdout += str;
-      });
+  return spawnPromise(bin, args, options).then(function({status, stderr, stdout, combined}) {
+    if (!ignoreExitCode && status !== 0) {
+      return Promise.reject(`command ${bin} ${args.join(' ')} failed with code ${status}\n` + combined);
     }
+    return Promise.resolve({exitCode: status, stderr, stdout});
 
-    if (child.stderr) {
-      child.stderr.on('data', function(chunk) {
-        const str = chunk.toString();
-
-        out += str;
-        stderr += str;
-      });
-    }
-    const kill = () => child.kill();
-
-    process.on('SIGINT', kill);
-    process.on('SIGQUIT', kill);
-    process.on('exit', kill);
-
-    child.on('close', (exitCode) => {
-      if (!options.ignoreExitCode && exitCode !== 0) {
-        return reject(`command ${bin} ${args.join(' ')} failed with code ${exitCode}\n` + out);
-      }
-      return resolve({exitCode, stderr, stdout});
-    });
   });
 };
 
