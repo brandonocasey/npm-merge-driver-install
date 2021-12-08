@@ -29,7 +29,7 @@ if (!fs.existsSync(infoDir)) {
   fs.mkdirSync(infoDir);
 }
 
-const uninstall = spawnSync(path.join(__dirname, 'uninstall.js'), [], {cwd: rootDir});
+const uninstall = spawnSync('node', [path.join(__dirname, 'uninstall.js')], {cwd: rootDir});
 
 // add to git config
 const configOne = spawnSync(
@@ -39,7 +39,7 @@ const configOne = spawnSync(
 );
 const configTwo = spawnSync(
   'git',
-  ['config', '--local', 'merge.npm-merge-driver-install.driver', `${merge} %A %O %B %P`],
+  ['config', '--local', 'merge.npm-merge-driver-install.driver', `node ${merge} %A %O %B %P`],
   {cwd: rootDir}
 );
 
