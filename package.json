@@ -22,14 +22,14 @@
     "node": ">=8"
   },
   "dependencies": {
-    "is-ci": "^3.0.0"
+    "is-ci": "^3.0.1"
   },
   "scripts": {
     "install": "node src/install.js",
     "lint": "vjsstandard",
     "pretest": "npm run lint",
     "test": "npm run test:unit && npm run test:verify",
-    "test:unit": "ava test.js",
+    "test:unit": "ava --timeout 5s ./test/index.test.js",
     "test:verify": "vjsverify --skip-syntax --verbose",
     "preversion": "npm test",
     "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
@@ -40,15 +40,15 @@
     "@brandonocasey/spawn-promise": "^0.2.0",
     "ava": "^3.15.0",
     "conventional-changelog-cli": "^2.1.1",
-    "conventional-changelog-videojs": "^3.0.0",
-    "doctoc": "^2.0.0",
-    "husky": "^6.0.0",
-    "lint-staged": "^10.5.4",
+    "conventional-changelog-videojs": "^3.0.2",
+    "doctoc": "^2.1.0",
+    "husky": "^4.3.8",
+    "lint-staged": "^12.1.2",
     "not-prerelease": "^1.0.1",
     "shelljs": "^0.8.4",
     "uuid": "^8.3.2",
-    "videojs-generator-verify": "~3.0.3",
-    "videojs-standard": "^8.0.4"
+    "videojs-generator-verify": "~4.0.1",
+    "videojs-standard": "^9.0.1"
   },
   "husky": {
     "hooks": {
