@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+/* eslint-disable no-console */
 const spawnSync = require('child_process').spawnSync;
 const path = require('path');
 const fs = require('fs');
 const logger = require('./console');
+const os = require('os');
 
 const currentVersion = process.argv[2];
 const ancestorVersion = process.argv[3];
@@ -14,7 +16,7 @@ const ret = spawnSync('git', ['merge-file', '-p', currentVersion, ancestorVersio
 
 fs.writeFileSync(file, ret.stdout);
 const install = spawnSync(
-  'npm',
+  os.platform() === 'win32' ? 'npm.cmd' : 'npm',
   ['install', '--package-lock-only', '--prefer-offline', '--no-audit', '--progress=false'],
   {cwd: path.dirname(file)}
 );
@@ -22,7 +24,6 @@ const install = spawnSync(
 if (install.status !== 0) {
   logger.log(`${file} merge failure`);
   logger.log('resolve package.json conflicts. Then run npm i --package-lock-only');
-  // eslint-disable-next-line
   console.log();
   process.exit(1);
 }

@@ -6,7 +6,7 @@ const spawnSync = require('child_process').spawnSync;
 const isCI = require('is-ci');
 const rootDir = require('./get-root.js')();
 const logger = require('./console');
-const merge = path.join(__dirname, 'merge.js');
+const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
 
 if (!rootDir) {
   logger.log('Current working directory is not using git, skipping install.');
@@ -39,7 +39,7 @@ const configOne = spawnSync(
 );
 const configTwo = spawnSync(
   'git',
-  ['config', '--local', 'merge.npm-merge-driver-install.driver', `node ${merge} %A %O %B %P`],
+  ['config', '--local', 'merge.npm-merge-driver-install.driver', `node '${mergePath}' %A %O %B %P`],
   {cwd: rootDir}
 );
 
