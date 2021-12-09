@@ -2,8 +2,10 @@ const spawnSync = require('child_process').spawnSync;
 const fs = require('fs');
 const path = require('path');
 
-const getRoot = () => {
-  const cwd = process.env.INIT_CWD ? process.env.INIT_CWD : process.cwd();
+const getRoot = (cwd) => {
+  if (!cwd) {
+    cwd = process.env.INIT_CWD ? process.env.INIT_CWD : process.cwd();
+  }
   const gitRootResult = spawnSync('git', ['rev-parse', '--show-toplevel'], {cwd});
   const rootDir = gitRootResult.stdout ? gitRootResult.stdout.toString().trim() : '';
 
