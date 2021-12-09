@@ -1,3 +1,20 @@
+<a name="2.0.2"></a>
+## [2.0.2](https://github.com/brandonocasey/npm-merge-driver-install/compare/v2.0.1...v2.0.2) (2021-12-09)
+
+### Bug Fixes
+
+* get-root issues and tests on windows ([3f8433e](https://github.com/brandonocasey/npm-merge-driver-install/commit/3f8433e))
+
+### Chores
+
+* add github actions ci setup ([78fb46f](https://github.com/brandonocasey/npm-merge-driver-install/commit/78fb46f))
+* update packages ([3e095b8](https://github.com/brandonocasey/npm-merge-driver-install/commit/3e095b8))
+* use shared package [@brandonocasey](https://github.com/brandonocasey)/spawn-promise ([bcc2a9c](https://github.com/brandonocasey/npm-merge-driver-install/commit/bcc2a9c))
+
+### Tests
+
+* add lots of tests ([efa36ae](https://github.com/brandonocasey/npm-merge-driver-install/commit/efa36ae))
+
 <a name="2.0.1"></a>
 ## [2.0.1](https://github.com/brandonocasey/npm-merge-driver-install/compare/v2.0.0...v2.0.1) (2020-11-09)
 
