@@ -32,3 +32,26 @@ test('no root without .git', (t) => {
 
   t.falsy(result, 'is an empty string');
 });
+
+test('can use process.cwd()', (t) => {
+  const oldcwd = process.cwd();
+
+  process.chdir(t.context.dir);
+
+  const result = getRoot();
+
+  t.truthy(result, 'is a valid path');
+  process.chdir(oldcwd);
+});
+
+test('can use INIT_CWD', (t) => {
+  process.env.INIT_CWD = t.context.dir;
+  process.chdir(t.context.dir);
+
+  const result = getRoot();
+
+  t.truthy(result, 'is a valid path');
+
+  delete process.env.INIT_CWD;
+});
+

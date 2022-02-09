@@ -11,6 +11,7 @@
   "bugs": {
     "url": "https://github.com/brandonocasey/npm-merge-driver-install/issues"
   },
+  "main": "src/index.js",
   "bin": {
     "npm-merge-driver-install": "src/install.js",
     "npm-merge-driver-uninstall": "src/uninstall.js",
@@ -29,7 +30,7 @@
     "lint": "vjsstandard",
     "pretest": "npm run lint",
     "test": "npm run test:unit",
-    "test:unit": "ava --timeout 1m './test/*.test.js'",
+    "test:unit": "nyc --reporter=json --reporter=text ava --timeout 1m './test/*.test.js'",
     "test:verify": "vjsverify --skip-syntax --verbose",
     "preversion": "npm test",
     "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
@@ -46,6 +47,7 @@
     "install-local": "^3.0.1",
     "lint-staged": "^12.1.2",
     "not-prerelease": "^1.0.1",
+    "nyc": "15.1.0",
     "shelljs": "^0.8.4",
     "uuid": "^8.3.2",
     "videojs-generator-verify": "~4.0.1",
