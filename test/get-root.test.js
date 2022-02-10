@@ -33,25 +33,32 @@ test('no root without .git', (t) => {
   t.falsy(result, 'is an empty string');
 });
 
+test('fails due to bad git executable', (t) => {
+  const env = t.context.fakegit();
+  const result = getRoot(t.context.dir, {env});
+
+  t.falsy(result, 'is an empty string');
+});
+
+test('fails without git executable', (t) => {
+  const result = getRoot(t.context.dir, {env: {PATH: ''}});
+
+  t.falsy(result, 'is an empty string');
+});
+
 test('can use process.cwd()', (t) => {
-  const oldcwd = process.cwd();
-
-  process.chdir(t.context.dir);
-
-  const result = getRoot();
+  const result = getRoot(null, {
+    process: {cwd: () => t.context.dir}
+  });
 
   t.truthy(result, 'is a valid path');
-  process.chdir(oldcwd);
 });
 
 test('can use INIT_CWD', (t) => {
-  process.env.INIT_CWD = t.context.dir;
-  process.chdir(t.context.dir);
-
-  const result = getRoot();
+  const result = getRoot(null, {
+    env: {INIT_CWD: t.context.dir}
+  });
 
   t.truthy(result, 'is a valid path');
-
-  delete process.env.INIT_CWD;
 });
 

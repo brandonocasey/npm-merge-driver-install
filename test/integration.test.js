@@ -8,7 +8,9 @@ test.before(sharedHooks.before);
 test.beforeEach((t) => {
   sharedHooks.beforeEach(t);
 
-  return t.context.install().then(function() {
+  return t.context.installPackage().then(function() {
+    return promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], {cwd: t.context.dir});
+  }).then(function(result) {
     return promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'not-prerelease'], {cwd: t.context.dir});
   }).then(function(result) {
     return promiseSpawn('git', ['add', '--all'], {cwd: t.context.dir});
@@ -16,7 +18,7 @@ test.beforeEach((t) => {
     return promiseSpawn('git', ['commit', '-a', '-m', '"add not-prerelease to dev deps"'], {cwd: t.context.dir});
   });
 });
-// test.afterEach.always(sharedHooks.afterEach);
+test.afterEach.always(sharedHooks.afterEach);
 test.after.always(sharedHooks.after);
 
 test('can merge package-lock only changes', (t) => {

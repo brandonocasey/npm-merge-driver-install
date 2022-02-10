@@ -3,7 +3,7 @@
 const spawnSync = require('child_process').spawnSync;
 const path = require('path');
 const fs = require('fs');
-const logger = require('./console');
+const logger = require('./logger');
 const os = require('os');
 
 const currentVersion = process.argv[2];

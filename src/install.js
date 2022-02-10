@@ -3,52 +3,46 @@
 const path = require('path');
 const fs = require('fs');
 const spawnSync = require('child_process').spawnSync;
-const isCI = require('is-ci');
 const getRoot = require('./get-root.js');
-const logger = require('./console');
+const logger = require('./logger.js');
+const uninstall = require('./uninstall.js');
+const noop = require('./noop.js');
 
-const install = function(cwd) {
-  const rootDir = getRoot(cwd);
-  const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
+const install = function(cwd, options) {
+  const logger_ = options && options.logger || logger;
+  const env = options && options.env || process.env;
+  const getRoot_ = options && options.getRoot || getRoot;
+  const rootDir = getRoot_(cwd, options);
 
   if (!rootDir) {
-    logger.log('Current working directory is not using git, skipping install.');
-    return 0;
+    logger_.log('Current working directory is not using git or git is not installed, skipping install.');
+    return 1;
   }
 
-  if (isCI && typeof process.env.NPM_MERGE_DRIVER_IGNORE_CI === 'undefined') {
-    logger.log('CI detected, skipping install.');
-    return 0;
-  }
+  uninstall(rootDir, {logger: {log: noop}});
 
-  if (typeof process.env.NPM_MERGE_DRIVER_SKIP_INSTALL !== 'undefined') {
-    logger.log('env variable NPM_MERGE_DRIVER_SKIP_INSTALL is set, skipping install.');
-    return 0;
-  }
-
+  const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
   const infoDir = path.join(rootDir, '.git', 'info');
 
   if (!fs.existsSync(infoDir)) {
     fs.mkdirSync(infoDir);
   }
 
-  const uninstall = spawnSync('node', [path.join(__dirname, 'uninstall.js')], {cwd: rootDir});
-
   // add to git config
   const configOne = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge npm lockfiles'],
-    {cwd: rootDir}
+    {cwd: rootDir, env}
   );
   const configTwo = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.driver', `node '${mergePath}' %A %O %B %P`],
-    {cwd: rootDir}
+    {cwd: rootDir, env}
   );
 
-  if (uninstall.status !== 0 || configOne.status !== 0 || configTwo.status !== 0) {
-    logger.log('Failed to configure npm-merge-driver-install in git directory');
-    process.exit(0);
+  if (configOne.status !== 0 || configTwo.status !== 0) {
+    logger_.log('Failed to configure npm-merge-driver-install in git directory');
+    return 1;
   }
 
   // add to attributes file
@@ -66,7 +60,8 @@ const install = function(cwd) {
   attrContents += 'package-lock.json merge=npm-merge-driver-install\n';
 
   fs.writeFileSync(attrFile, attrContents);
-  logger.log('installed successfully');
+
+  logger_.log('installed successfully');
 
   return 0;
 };

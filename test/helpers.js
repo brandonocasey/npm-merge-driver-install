@@ -4,39 +4,14 @@ const shell = require('shelljs');
 const uuid = require('uuid');
 const fs = require('fs');
 const installLocalBin = require.resolve('install-local/bin/install-local');
+const isInstalled = require('../src/is-installed.js');
+const os = require('os');
 
 const BASE_DIR = path.resolve(__dirname, '..');
 const TEMP_DIR = shell.tempdir();
 
 const getTempDir = function() {
   return path.join(TEMP_DIR, uuid.v4());
-};
-
-const isInstalled = function(dir) {
-  const gitConfigPath = path.join(dir, '.git', 'config');
-  const gitAttrPath = path.join(dir, '.git', 'info', 'attributes');
-
-  if (!shell.test('-f', gitConfigPath)) {
-    return false;
-  }
-
-  const config = shell.cat(gitConfigPath);
-
-  if (!(/npm-merge-driver-install/i).test(config)) {
-    return false;
-  }
-
-  if (!shell.test('-f', gitAttrPath)) {
-    return false;
-  }
-
-  const attr = shell.cat(gitAttrPath);
-
-  if (!(/npm-merge-driver-install/i).test(attr)) {
-    return false;
-  }
-
-  return true;
 };
 
 const promiseSpawn = function(bin, args, options = {}) {
@@ -83,17 +58,47 @@ const sharedHooks = {
     });
   },
   beforeEach: (t) => {
+    t.context.old = {
+      PATH: process.env.PATH
+    };
+    t.context.logs = [];
+    t.context.fakeLogger = {
+      log: (...args) => {
+        t.context.logs.push.apply(t.context.logs, args);
+      }
+    };
+
     t.context.dir = getTempDir();
     shell.cp('-R', t.context.template, t.context.dir);
 
-    t.context.install = function(env = {}) {
+    t.context.installPackage = function(env = {}) {
       return promiseSpawn('node', [installLocalBin, BASE_DIR], {cwd: t.context.dir, env});
+    };
+
+    t.context.fakegit = function() {
+      // put the tempdir path as highest priorty in PATH
+      let separator = ':';
+      let gitDest = path.join(t.context.dir, 'git');
+
+      if (os.platform() === 'win32') {
+        separator = ';';
+        gitDest += '.exe';
+      }
+
+      // move a fake git binary into the temp context dir
+      // this will cause git to fail to run
+      shell.cp(path.join(__dirname, 'fakegit.js'), gitDest);
+
+      return Object.assign({}, process.env, {
+        PATH: `${t.context.dir}${separator}${process.env.PATH}`
+      });
     };
 
   },
 
   afterEach: (t) => {
     shell.rm('-rf', t.context.dir);
+    process.env.PATH = t.context.old.PATH;
   },
 
   after: (t) => {

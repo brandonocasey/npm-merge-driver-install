@@ -10,11 +10,8 @@ A package to automatically merge package-lock.json conflicts. Heavily based on [
 **Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
 
 - [Installation](#installation)
-- [When will it installs](#when-will-it-installs)
-- [Cli usage](#cli-usage)
-- [Options](#options)
-  - [NPM_MERGE_DRIVER_SKIP_INSTALL](#npm_merge_driver_skip_install)
-  - [NPM_MERGE_DRIVER_IGNORE_CI](#npm_merge_driver_ignore_ci)
+- [I don't want it to install in ci](#i-dont-want-it-to-install-in-ci)
+- [Provided binaries](#provided-binaries)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -25,20 +22,32 @@ To install run
 npm i --save-dev npm-merge-driver-install
 ```
 
-## When will it installs
-It will install when the package is installed if:
-1. We are not running in a CI, unless the [`NPM_MERGE_DRIVER_IGNORE_CI`](###NPM_MERGE_DRIVER_IGNORE_CI) option is used.
-2. The root project has a `.git` directory.
-3. The [`NPM_MERGE_DRIVER_SKIP_INSTALL`](###NPM_MERGE_DRIVER_SKIP_INSTALL) option is not in use.
+then add a prepare script in package.json like the following:
+```
+{"prepare": "npm-merge-driver-install"}
+```
 
-## Cli usage
-It can also be installed by running the provided binary (`npm-merge-driver-install`) although the rules above about when it will install still apply.
+## I don't want it to install in ci
 
-## Options
-Options are passed through as command line environment variables
+create a prepare.js file and change your prepare script to the following:
 
-### NPM_MERGE_DRIVER_SKIP_INSTALL
-If this variable is present in the environment when `npm-merge-driver-install` is installed, then `npm-merge-driver` will not be installed.
+```js
+// NOTE: you can use is-ci here or other custom code
+const isCI = require('is-ci');
+const npmMergeDriverInstall = require('npm-merge-driver-install');
 
-### NPM_MERGE_DRIVER_IGNORE_CI
-If this variable is present in the environment when `npm-merge-driver-install` is installed on a CI it will be possible for `npm-merge-driver` to be installed in a CI.
+if (!isCi) {
+  npmMergeDriverInstall.install();
+}
+```
+
+then change the `prepare` script in package.json to
+```
+{"prepare": "node prepare.js"}
+```
+
+## Provided binaries
+* `npm-merge-driver-install`: install npm merge driver
+* `npm-merge-driver-uninstall`: uninstall npm merge driver
+* `npm-merge-driver-merge`: the internal merge binary used to merge package.json and package-lock.json
+* `npm-merge-driver-is-installed`: check if npm-merge-driver-install is installed
