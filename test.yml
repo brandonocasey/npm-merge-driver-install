@@ -1,0 +1,328 @@
+<a name="3.0.0"></a>
+# [3.0.0](https://github.com/brandonocasey/npm-merge-driver-install/compare/v2.0.2...v3.0.0) (2022-02-10)
+
+### Features
+
+* **BREAKING:** no auto installation, better manual install support ([7e26931](https://github.com/brandonocasey/npm-merge-driver-install/commit/7e26931))
+
+<a name="2.0.2"></a>
+## [2.0.2](https://github.com/brandonocasey/npm-merge-driver-install/compare/v2.0.1...v2.0.2) (2021-12-09)
+
+### Bug Fixes
+
+* get-root issues and tests on windows ([3f8433e](https://github.com/brandonocasey/npm-merge-driver-install/commit/3f8433e))
+
+### Chores
+
+* add github actions ci setup ([78fb46f](https://github.com/brandonocasey/npm-merge-driver-install/commit/78fb46f))
+* update packages ([3e095b8](https://github.com/brandonocasey/npm-merge-driver-install/commit/3e095b8))
+* use shared package [@brandonocasey](https://github.com/brandonocasey)/spawn-promise ([bcc2a9c](https://github.com/brandonocasey/npm-merge-driver-install/commit/bcc2a9c))
+
+### Tests
+
+* add lots of tests ([efa36ae](https://github.com/brandonocasey/npm-merge-driver-install/commit/efa36ae))
+
+<a name="2.0.1"></a>
+## [2.0.1](https://github.com/brandonocasey/npm-merge-driver-install/compare/v2.0.0...v2.0.1) (2020-11-09)
+
+### Bug Fixes
+
+* remove npm-merge-driver too ([7539ffb](https://github.com/brandonocasey/npm-merge-driver-install/commit/7539ffb))
+
+<a name="2.0.0"></a>
+# [2.0.0](https://github.com/brandonocasey/npm-merge-driver-install/compare/v1.1.1...v2.0.0) (2020-10-22)
+
+### Features
+
+* remove most dependencies to prevent security issues ([ce8eccf](https://github.com/brandonocasey/npm-merge-driver-install/commit/ce8eccf))
+
+### Chores
+
+* fix travis ([20dc4e5](https://github.com/brandonocasey/npm-merge-driver-install/commit/20dc4e5))
+* **package:** update dependencies to enable Greenkeeper 🌴 ([#7](https://github.com/brandonocasey/npm-merge-driver-install/issues/7)) ([84ab239](https://github.com/brandonocasey/npm-merge-driver-install/commit/84ab239))
+* **package:** update videojs-generator-verify to version 1.2.0 ([#5](https://github.com/brandonocasey/npm-merge-driver-install/issues/5)) ([84a52a6](https://github.com/brandonocasey/npm-merge-driver-install/commit/84a52a6))
+
+
+### BREAKING CHANGES
+
+* We no longer use npm-merge-driver under the hood.
+Instead we use scripts that do the same thing.
+
+<a name="1.1.1"></a>
+## [1.1.1](https://github.com/brandonocasey/npm-merge-driver-install/compare/v1.1.0...v1.1.1) (2018-10-31)
+
+### Bug Fixes
+
+* Add bin to package.json ([83a891c](https://github.com/brandonocasey/npm-merge-driver-install/commit/83a891c))
+
+<a name="1.1.0"></a>
+# [1.1.0](https://github.com/brandonocasey/npm-merge-driver-install/compare/v1.0.0...v1.1.0) (2018-10-31)
+
+### Features
+
+* add binary usage ([ad17d7f](https://github.com/brandonocasey/npm-merge-driver-install/commit/ad17d7f))
+
+### Bug Fixes
+
+* a typo ([9669c13](https://github.com/brandonocasey/npm-merge-driver-install/commit/9669c13))
+
+### Chores
+
+* **package:** update lint-staged to version 8.0.4 ([#3](https://github.com/brandonocasey/npm-merge-driver-install/issues/3)) ([17c7f13](https://github.com/brandonocasey/npm-merge-driver-install/commit/17c7f13))
+
+### Documentation
+
+* **readme:** add Greenkeeper badge ([#1](https://github.com/brandonocasey/npm-merge-driver-install/issues/1)) ([1eff20c](https://github.com/brandonocasey/npm-merge-driver-install/commit/1eff20c))
+* add travis badge ([b76976f](https://github.com/brandonocasey/npm-merge-driver-install/commit/b76976f))
+Skip to content
+Search or jump to…
+Pull requests
+Issues
+Marketplace
+Explore
+ 
+@Moejojojojo 
+Moejojojojo
+/
+caddy-ui
+Public
+forked from qdm12/caddy-ui
+Code
+Pull requests
+Actions
+Projects
+Wiki
+Security
+Insights
+Settings
+Maint: update devcontainer files
+ master
+@qdm12
+qdm12 committed on Jul 19, 2021 
+1 parent 12c506b commit 3a446d872d9ca8086322d3db06fa4823d0b8e5a3
+Showing  with 176 additions and 103 deletions.
+ 5  .devcontainer/.dockerignore 
+@@ -0,0 +1,5 @@
+.dockerignore
+devcontainer.json
+docker-compose.yml
+Dockerfile
+README.md
+ 1  .devcontainer/Dockerfile 
+@@ -0,0 +1 @@
+FROM qmcgaw/reactdevcontainer
+ 70  .devcontainer/README.md 
+@@ -0,0 +1,70 @@
+# Development container
+
+Development container that can be used with VSCode.
+
+It works on Linux, Windows and OSX.
+
+## Requirements
+
+- [VS code](https://code.visualstudio.com/download) installed
+- [VS code remote containers extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-containers) installed
+- [Docker](https://www.docker.com/products/docker-desktop) installed and running
+- [Docker Compose](https://docs.docker.com/compose/install/) installed
+
+## Setup
+
+1. Create the following files on your host if you don't have them:
+
+    ```sh
+    touch ~/.gitconfig ~/.zsh_history
+    ```
+
+    Note that the development container will create the empty directories `~/.docker`, `~/.ssh` and `~/.kube` if you don't have them.
+
+1. **For Docker on OSX or Windows without WSL**: ensure your home directory `~` is accessible by Docker.
+1. **For Docker on Windows without WSL:** if you want to use SSH keys, bind mount your host `~/.ssh` to `/tmp/.ssh` instead of `~/.ssh` by changing the `volumes` section in the [docker-compose.yml](docker-compose.yml).
+1. Open the command palette in Visual Studio Code (CTRL+SHIFT+P).
+1. Select `Remote-Containers: Open Folder in Container...` and choose the project directory.
+
+## Customization
+
+### Customize the image
+
+You can make changes to the [Dockerfile](Dockerfile) and then rebuild the image. For example, your Dockerfile could be:
+
+```Dockerfile
+FROM qmcgaw/reactdevcontainer
+RUN apk add curl
+```
+
+To rebuild the image, either:
+
+- With VSCode through the command palette, select `Remote-Containers: Rebuild and reopen in container`
+- With a terminal, go to this directory and `docker-compose build`
+
+### Customize VS code settings
+
+You can customize **settings** and **extensions** in the [devcontainer.json](devcontainer.json) definition file.
+
+### Entrypoint script
+
+You can bind mount a shell script to `/home/vscode/.welcome.sh` to replace the [current welcome script](shell/.welcome.sh).
+
+### Publish a port
+
+To access a port from your host to your development container, publish a port in [docker-compose.yml](docker-compose.yml). You can also now do it directly with VSCode without restarting the container.
+
+### Run other services
+
+1. Modify [docker-compose.yml](docker-compose.yml) to launch other services at the same time as this development container, such as a test database:
+
+    ```yml
+      database:
+        image: postgres
+        restart: always
+        environment:
+          POSTGRES_PASSWORD: password
+    ```
+
+1. In [devcontainer.json](devcontainer.json), change the line `"runServices": ["vscode"],` to `"runServices": ["vscode", "database"],`.
+1. In the VS code command palette, rebuild the container.
+ 147  .devcontainer/devcontainer.json 
+@@ -1,81 +1,68 @@
+{	{
+    "name": "caddy-ui-dev",	    "name": "caddy-ui-dev",
+    "dockerComposeFile": ["docker-compose.yml"],	    "dockerComposeFile": ["docker-compose.yml"],
+    "service": "vscode",	    "service": "vscode",
+    "runServices": ["vscode"],	    "runServices": ["vscode"],
+    "shutdownAction": "stopCompose",	    "shutdownAction": "stopCompose",
+    "postCreateCommand": "yarn install",	    "postCreateCommand": "source ~/.windows.sh",
+    "workspaceFolder": "/workspace",	    "workspaceFolder": "/workspace",
+    // "overrideCommand": "",	    // "overrideCommand": "",
+    "extensions": [	    "extensions": [
+        // General frontend	        "dbaeumer.vscode-eslint", // ESLint
+        "bierner.color-info",	        "esbenp.prettier-vscode", // Prettier code formatter
+        "cssho.vscode-svgviewer",	        "bierner.color-info", // JSX and CSS color information
+        "JakeWilson.vscode-cdnjs",	        "jpoissonnier.vscode-styled-components", // Styled components
+        // React	        "visualstudioexptteam.vscodeintellicode", // AI-assisted development
+        "jpoissonnier.vscode-styled-components",	        "eg2.vscode-npm-script", // NPM support for VS code
+        // General javascript/typescript	        "christian-kohler.npm-intellisense", // Autocompletes npm modules in import statements
+        "dbaeumer.vscode-eslint",	        "cssho.vscode-svgviewer", // SVG viewer
+        "ms-vscode.vscode-typescript-tslint-plugin",	        "eamodio.gitlens", // IDE Git information
+        "esbenp.prettier-vscode",	        "ms-azuretools.vscode-docker", // Docker integration and linting
+        "visualstudioexptteam.vscodeintellicode",	        "shardulm94.trailing-spaces", // Show trailing spaces
+        "christian-kohler.npm-intellisense",	        "davidanson.vscode-markdownlint",
+        "eg2.vscode-npm-script",	        "IBM.output-colorizer", // Colorize your output/test logs
+        // Console	        "Gruntfuggly.todo-tree", // Highlights TODO comments
+        "IBM.output-colorizer",	        "bierner.emojisense", // Emoji sense for markdown
+        // Git	        "stkb.rewrap", // rewrap comments after n characters on one line
+        "eamodio.gitlens",	        "vscode-icons-team.vscode-icons", // Better file extension icons
+        "mhutchie.git-graph",	        "github.vscode-pull-request-github", // Github interaction
+        // Other linters	        // "JakeWilson.vscode-cdnjs", // Search and embed libraries from cdnjs.com
+        "davidanson.vscode-markdownlint",	        // "alefragnani.Bookmarks",
+        "ms-azuretools.vscode-docker",	        // "quicktype.quicktype", // Paste JSON as code
+        // Other helpers	        // "spikespaz.vscode-smoothtype", // smooth cursor animation
+        "shardulm94.trailing-spaces",	    ],
+        "Gruntfuggly.todo-tree",	    "settings": {
+        "bierner.emojisense",	        "files.eol": "\n",
+        "stkb.rewrap", // rewrap comments after n characters on one line	        "editor.tabSize": 2,
+        // Other	        "remote.extensionKind": {
+        "jrebocho.vscode-random", // generate random values	            "ms-azuretools.vscode-docker": "workspace"
+        "alefragnani.Bookmarks",	        },
+        "quicktype.quicktype", // Paste JSON as code	        "editor.codeActionsOnSave": {
+        "spikespaz.vscode-smoothtype", // smooth cursor animation	            "source.fixAll.eslint": true
+        "vscode-icons-team.vscode-icons",	        },
+        "github.vscode-pull-request-github"	        "eslint.validate": [
+    ],	            "javascript",
+    "settings": {	            "javascriptreact",
+        // General settings	            "typescript",
+        "files.eol": "\n",	            "typescriptreact"
+        // Docker	        ],
+        "remote.extensionKind": {	        "editor.formatOnSave": true,
+            "ms-azuretools.vscode-docker": "workspace"	        "[javascript]": {
+        },	            "editor.defaultFormatter": "esbenp.prettier-vscode",
+        // Javascript	            "editor.formatOnSave": false
+        "editor.codeActionsOnSave": {	          },
+            "source.fixAll.eslint": true	          "[javascriptreact]": {
+        },	              "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "eslint.validate": [	              "editor.formatOnSave": false
+            "javascript",	          },
+            "javascriptreact",	          "[typescript]": {
+            "typescript",	              "editor.defaultFormatter": "esbenp.prettier-vscode",
+            "typescriptreact"	              "editor.formatOnSave": false
+        ],	          },
+        "editor.formatOnSave": true,	          "[typescriptreact]": {
+        "[javascript]": {	              "editor.defaultFormatter": "esbenp.prettier-vscode",
+            "editor.defaultFormatter": "esbenp.prettier-vscode",	              "editor.formatOnSave": false
+            "editor.formatOnSave": false	          },
+          },	          "prettier-eslint.eslintIntegration": true
+          "[javascriptreact]": {	    }
+              "editor.defaultFormatter": "esbenp.prettier-vscode",	
+              "editor.formatOnSave": false	
+          },	
+          "[typescript]": {	
+              "editor.defaultFormatter": "esbenp.prettier-vscode",	
+              "editor.formatOnSave": false	
+          },	
+          "[typescriptreact]": {	
+              "editor.defaultFormatter": "esbenp.prettier-vscode",	
+              "editor.formatOnSave": false	
+          },	
+          "prettier-eslint.eslintIntegration": true	
+    }	
+} 	} 
+ 56  .devcontainer/docker-compose.yml 
+@@ -1,23 +1,33 @@
+version: "3.7"	version: "3.7"
+
+
+services:	services:
+  vscode:	  vscode:
+    image: qmcgaw/reactdevcontainer	    build: .
+    volumes:	    image: qmcgaw/reactdevcontainer
+      - node_modules:/workspace/node_modules	    volumes:
+      - ../:/workspace	      # Docker volume to contain node_modules for performance reason
+      - ~/.ssh:/home/vscode/.ssh:ro	      - node_modules:/workspace/node_modules
+      - ~/.ssh:/root/.ssh:ro	      - ../:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock	      # Docker
+    environment:	      - ~/.docker:/root/.docker:z
+      - TZ=America/Montreal	      # Docker socket to access Docker server
+    cap_add:	      - /var/run/docker.sock:/var/run/docker.sock
+      - SYS_PTRACE	      # SSH directory for Linux, OSX and WSL
+    security_opt:	      - ~/.ssh:/root/.ssh:z
+      - seccomp:unconfined	      # For Windows without WSL, a copy will be made
+    entrypoint: zsh -c "while sleep 1000; do :; done"	      # from /tmp/.ssh to ~/.ssh to fix permissions
+    ports:	      # - ~/.ssh:/tmp/.ssh:ro
+      - 3000/tcp	      # Shell history persistence
+
+      - ~/.zsh_history:/root/.zsh_history:z
+volumes:	      # Git config
+  node_modules:	      - ~/.gitconfig:/root/.gitconfig:z
+      # Kubernetes
+      # - ~/.kube:/root/.kube:z
+    environment:
+      - TZ=
+    entrypoint: zsh -c "while sleep 1000; do :; done"
+    ports:
+      - 3000/tcp
+
+volumes:
+  node_modules:
+0 comments on commit 3a446d8
+@Moejojojojo
+ 
+ 
+Leave a comment
+No file chosen
+Attach files by dragging & dropping, selecting or pasting them.
+ You’re receiving notifications because you’re watching this repository.
+© 2022 GitHub, Inc.
+Terms
+Privacy
+Security
+Status
+Docs
+Contact GitHub
+Pricing
+API
+Training
+Blog
+About
+Loading...complete
+:Build:
+Return: 'Run ''
