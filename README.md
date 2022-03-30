@@ -24,26 +24,18 @@ npm i --save-dev npm-merge-driver-install
 
 then add a prepare script in package.json like the following:
 ```
-{"prepare": "npm-merge-driver-install"}
+"prepare": "npm-merge-driver-install"
 ```
 
 ## I don't want it to install in ci
 
-create a prepare.js file and change your prepare script to the following:
-
-```js
-// NOTE: you can use is-ci here or other custom code
-const isCI = require('is-ci');
-const npmMergeDriverInstall = require('npm-merge-driver-install');
-
-if (!isCi) {
-  npmMergeDriverInstall.install();
-}
+Change the `prepare` script in package.json to
 ```
-
-then change the `prepare` script in package.json to
+"prepare": "is-ci || npm-merge-driver-install"
 ```
-{"prepare": "node prepare.js"}
+And:
+```sh
+npm i --save-dev is-ci
 ```
 
 ## Provided binaries
