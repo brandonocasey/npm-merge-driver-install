@@ -1,5 +1,5 @@
 const path = require("node:path");
-const spawnPromise = require("@brandonocasey/spawn-promise");
+const { spawn } = require("node:child_process");
 const fs = require("node:fs/promises");
 const fsSync = require("node:fs");
 const installLocalBin = require.resolve("install-local/bin/install-local");
@@ -28,11 +28,46 @@ const promiseSpawn = (bin, args, options = {}) => {
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  return spawnPromise(bin, args, options).then(({ status, stderr, stdout, combined }) => {
-    if (!ignoreExitCode && status !== 0) {
-      return Promise.reject(`command ${bin} ${args.join(" ")} failed with code ${status}\n${combined}`);
+  // On Windows, npm is a batch file (.cmd) that cannot be executed directly via spawn.
+  // Using shell: true allows the shell to resolve and execute .cmd/.bat files.
+  // Note: shell: true has some overhead but is the simplest cross-platform solution.
+  if (os.platform() === "win32" && bin === "npm") {
+    options.shell = true;
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args, options);
+    let stdout = "";
+    let stderr = "";
+    let combined = "";
+
+    if (child.stdout) {
+      child.stdout.on("data", (data) => {
+        const str = data.toString();
+        stdout += str;
+        combined += str;
+      });
     }
-    return Promise.resolve({ exitCode: status, stderr, stdout });
+
+    if (child.stderr) {
+      child.stderr.on("data", (data) => {
+        const str = data.toString();
+        stderr += str;
+        combined += str;
+      });
+    }
+
+    child.on("error", (error) => {
+      reject(error);
+    });
+
+    child.on("close", (status) => {
+      if (!ignoreExitCode && status !== 0) {
+        reject(new Error(`command ${bin} ${args.join(" ")} failed with code ${status}\n${combined}`));
+      } else {
+        resolve({ exitCode: status, stderr, stdout });
+      }
+    });
   });
 };
 
@@ -46,12 +81,23 @@ const sharedHooks = {
     await fs.writeFile(path.join(t.context.template, ".gitignore"), "node_modules\n");
 
     // create the package.json
-    return promiseSpawn("npm", ["init", "-y"], { cwd: t.context.template })
-      .then((_result) => {
-        // create the .git dir
-        return promiseSpawn("git", ["init"], { cwd: t.context.template });
-      })
-      .then((_result) => promiseSpawn("npm", ["install", "--package-lock-only"]))
+    const packageJson = {
+      name: "test-package",
+      version: "1.0.0",
+      description: "",
+      main: "index.js",
+      scripts: {
+        test: 'echo "Error: no test specified" && exit 1',
+      },
+      keywords: [],
+      author: "",
+      license: "ISC",
+    };
+    await fs.writeFile(path.join(t.context.template, "package.json"), JSON.stringify(packageJson, null, 2));
+
+    // create the .git dir
+    return promiseSpawn("git", ["init"], { cwd: t.context.template })
+      .then((_result) => promiseSpawn("npm", ["install", "--package-lock-only"], { cwd: t.context.template }))
       .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.template }))
       .then((_result) =>
         promiseSpawn("git", ["config", "--local", "user.email", '"you@example.com"'], { cwd: t.context.template }),
