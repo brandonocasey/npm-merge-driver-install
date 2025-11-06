@@ -102,11 +102,15 @@ jobs:
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
           fi
           . "$NVM_DIR/nvm.sh"
-          nvm install $NODE_VERSION
-          nvm use $NODE_VERSION
+          nvm install "$NODE_VERSION"
+          nvm use "$NODE_VERSION"
           cd "$WSL_WORKSPACE"
           npm install --prefer-offline --no-audit
           npm test
           '@
-          wsl bash -lc "$bashScript"
+          $normalizedScript = $bashScript -replace "`r`n", "`n"
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalizedScript)
+          $encoded = [System.Convert]::ToBase64String($bytes)
+          $wslCommand = "printf '%s' '$encoded' | base64 -d > /tmp/wsl-ci.sh && bash /tmp/wsl-ci.sh"
+          wsl bash -lc "$wslCommand"
         if: ${{ matrix.use-wsl == 'true' }}
