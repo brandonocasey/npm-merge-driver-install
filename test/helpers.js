@@ -24,23 +24,9 @@ const promiseSpawn = (bin, args, options = {}) => {
   const ignoreExitCode = options.ignoreExitCode;
 
   options.ignoreExitCode = undefined;
-  const baseEnv = { ...process.env };
   options = { stdio: "pipe", encoding: "utf8", ...options };
-  options.env = { ...baseEnv, ...(options.env || {}) };
-
-  if (options.env.PATH === undefined && options.env.Path === undefined) {
-    options.env.PATH = baseEnv.PATH;
-  }
-
-  if (os.platform() === "win32") {
-    const binLower = bin.toLowerCase();
-    const needsShell =
-      binLower.endsWith(".cmd") || binLower.endsWith(".bat") || binLower === "npm" || binLower === "npx";
-
-    if (needsShell) {
-      options.shell = true;
-    }
-  }
+  options.env = options.env || {};
+  options.env.PATH = options.env.PATH || process.env.PATH;
 
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args, options);
