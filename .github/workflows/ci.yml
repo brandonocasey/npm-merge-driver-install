@@ -107,5 +107,5 @@ jobs:
           npm install --prefer-offline --no-audit
           npm test
           '@
-          wsl bash -lc $bashScript
+          wsl bash -lc "$bashScript"
         if: ${{ matrix.use-wsl == 'true' }}

@@ -28,13 +28,6 @@ const promiseSpawn = (bin, args, options = {}) => {
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  // On Windows, npm is a batch file (.cmd) that cannot be executed directly via spawn.
-  // Using shell: true allows the shell to resolve and execute .cmd/.bat files.
-  // Note: shell: true has some overhead but is the simplest cross-platform solution.
-  if (os.platform() === "win32") {
-    options.shell = true;
-  }
-
   return new Promise((resolve, reject) => {
     const child = spawn(bin, args, options);
     let stdout = "";
