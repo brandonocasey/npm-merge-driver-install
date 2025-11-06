@@ -5,6 +5,7 @@ const fsSync = require("node:fs");
 const installLocalBin = require.resolve("install-local/bin/install-local");
 const isInstalled = require("../src/is-installed.js");
 const os = require("node:os");
+const gitBin = require("../src/git-bin.js");
 
 const BASE_DIR = path.resolve(__dirname, "..");
 const TEMP_DIR = os.tmpdir();
@@ -31,7 +32,7 @@ const promiseSpawn = (bin, args, options = {}) => {
   // On Windows, npm is a batch file (.cmd) that cannot be executed directly via spawn.
   // Using shell: true allows the shell to resolve and execute .cmd/.bat files.
   // Note: shell: true has some overhead but is the simplest cross-platform solution.
-  if (os.platform() === "win32" && bin === "npm") {
+  if (os.platform() === "win32") {
     options.shell = true;
   }
 
@@ -96,16 +97,16 @@ const sharedHooks = {
     await fs.writeFile(path.join(t.context.template, "package.json"), JSON.stringify(packageJson, null, 2));
 
     // create the .git dir
-    return promiseSpawn("git", ["init"], { cwd: t.context.template })
+    return promiseSpawn(gitBin, ["init"], { cwd: t.context.template })
       .then((_result) => promiseSpawn("npm", ["install", "--package-lock-only"], { cwd: t.context.template }))
-      .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.template }))
+      .then((_result) => promiseSpawn(gitBin, ["add", "--all"], { cwd: t.context.template }))
       .then((_result) =>
-        promiseSpawn("git", ["config", "--local", "user.email", '"you@example.com"'], { cwd: t.context.template }),
+        promiseSpawn(gitBin, ["config", "--local", "user.email", '"you@example.com"'], { cwd: t.context.template }),
       )
       .then((_result) =>
-        promiseSpawn("git", ["config", "--local", "user.name", '"Your Name"'], { cwd: t.context.template }),
+        promiseSpawn(gitBin, ["config", "--local", "user.name", '"Your Name"'], { cwd: t.context.template }),
       )
-      .then((_result) => promiseSpawn("git", ["commit", "-a", "-m", '"initial"'], { cwd: t.context.template }));
+      .then((_result) => promiseSpawn(gitBin, ["commit", "-a", "-m", '"initial"'], { cwd: t.context.template }));
   },
   beforeEach: async (t) => {
     t.context.old = {
@@ -142,14 +143,8 @@ const sharedHooks = {
       promiseSpawn("node", [installLocalBin, BASE_DIR], { cwd: t.context.dir, env });
 
     t.context.fakegit = () => {
-      // put the tempdir path as highest priorty in PATH
-      let separator = ":";
-      let gitDest = path.join(t.context.dir, "git");
-
-      if (os.platform() === "win32") {
-        separator = ";";
-        gitDest += ".exe";
-      }
+      const separator = os.platform() === "win32" ? ";" : ":";
+      const gitDest = path.join(t.context.dir, gitBin);
 
       // move a fake git binary into the temp context dir
       // this will cause git to fail to run

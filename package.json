@@ -36,7 +36,6 @@
     "ava": "6.4.1",
     "conventional-changelog-cli": "5.0.0",
     "conventional-changelog-videojs": "3.0.2",
-    "cross-spawn": "7.0.6",
     "doctoc": "2.2.1",
     "install-local": "3.0.1",
     "lefthook": "2.0.1",

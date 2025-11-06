@@ -56,20 +56,21 @@ test("does not install with bad git command", (t) => {
 
 test("can fail on getting git directory", (t) => {
   const exitCode = t.context.install({
-    getRoot: () => t.context.dir,
     getGitDir: () => "",
   });
 
   t.false(isInstalled(t.context.dir));
   t.is(exitCode, 1);
-  t.deepEqual(t.context.logs.sort(), ["Failed to get git directory"].sort());
+  t.deepEqual(
+    t.context.logs.sort(),
+    ["Current working directory is not using git or git is not installed, skipping install."].sort(),
+  );
 });
 
 test("can fail on git config", (t) => {
   const env = t.context.fakegit();
   const exitCode = t.context.install({
     env,
-    getRoot: () => t.context.dir,
     getGitDir: () => path.join(t.context.dir, ".git"),
   });
 

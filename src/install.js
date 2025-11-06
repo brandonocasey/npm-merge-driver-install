@@ -4,8 +4,8 @@
 const path = require("node:path");
 const fs = require("node:fs");
 const spawnSync = require("node:child_process").spawnSync;
-const getRoot = require("./get-root.js");
 const { getGitDir } = require("./get-git-dir.js");
+const gitBin = require("./git-bin.js");
 const logger = require("./logger.js");
 const uninstall = require("./uninstall.js");
 const noop = require("./noop.js");
@@ -13,24 +13,19 @@ const noop = require("./noop.js");
 const install = (cwd, options) => {
   const logger_ = options?.logger || logger;
   const env = options?.env || process.env;
-  const getRoot_ = options?.getRoot || getRoot;
+  const proc = options?.process || process;
   const getGitDir_ = options?.getGitDir || getGitDir;
-  const rootDir = getRoot_(cwd, options);
+  const workingDir = cwd || env.INIT_CWD || proc.cwd();
+  const gitDir = getGitDir_(workingDir, options);
 
-  if (!rootDir) {
+  if (!gitDir) {
     logger_.log("Current working directory is not using git or git is not installed, skipping install.");
     return 1;
   }
 
-  uninstall(rootDir, { logger: { log: noop } });
+  uninstall(workingDir, { logger: { log: noop }, env, process: proc, getGitDir: getGitDir_ });
 
-  const mergePath = path.relative(rootDir, path.resolve(__dirname, "merge.js"));
-  const gitDir = getGitDir_(rootDir, options);
-
-  if (!gitDir) {
-    logger_.log("Failed to get git directory");
-    return 1;
-  }
+  const mergePath = path.resolve(__dirname, "merge.js");
 
   const infoDir = path.join(gitDir, "info");
 
@@ -40,14 +35,14 @@ const install = (cwd, options) => {
 
   // add to git config
   const configOne = spawnSync(
-    "git",
+    gitBin,
     ["config", "--local", "merge.npm-merge-driver-install.name", "automatically merge npm lockfiles"],
-    { cwd: rootDir, env },
+    { cwd: workingDir, env },
   );
   const configTwo = spawnSync(
-    "git",
+    gitBin,
     ["config", "--local", "merge.npm-merge-driver-install.driver", `node '${mergePath}' %A %O %B %P`],
-    { cwd: rootDir, env },
+    { cwd: workingDir, env },
   );
 
   if (configOne.status !== 0 || configTwo.status !== 0) {

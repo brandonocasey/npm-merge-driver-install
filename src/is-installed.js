@@ -1,17 +1,10 @@
 #!/usr/bin/env node
 
-const getRoot = require("./get-root.js");
 const { getGitDir } = require("./get-git-dir.js");
 const path = require("node:path");
 const fs = require("node:fs");
 
-const inConfig = (cwd, options) => {
-  const gitDir = getGitDir(cwd, options);
-
-  if (!gitDir) {
-    return false;
-  }
-
+const inConfig = (gitDir) => {
   const gitConfigPath = path.join(gitDir, "config");
 
   if (!fs.existsSync(gitConfigPath)) {
@@ -23,13 +16,7 @@ const inConfig = (cwd, options) => {
   return /npm-merge-driver-install/i.test(config);
 };
 
-const inAttr = (cwd, options) => {
-  const gitDir = getGitDir(cwd, options);
-
-  if (!gitDir) {
-    return false;
-  }
-
+const inAttr = (gitDir) => {
   const gitAttrPath = path.join(gitDir, "info", "attributes");
 
   if (!fs.existsSync(gitAttrPath)) {
@@ -42,18 +29,17 @@ const inAttr = (cwd, options) => {
 };
 
 const isInstalled = (cwd, options) => {
-  const getRoot_ = options?.getRoot || getRoot;
-  const rootDir = getRoot_(cwd, options);
+  const env = options?.env || process.env;
+  const proc = options?.process || process;
+  const getGitDir_ = options?.getGitDir || getGitDir;
+  const workingDir = cwd || env.INIT_CWD || proc.cwd();
+  const gitDir = getGitDir_(workingDir, options);
 
-  if (!rootDir) {
+  if (!gitDir) {
     return false;
   }
 
-  if (inConfig(rootDir, options) || inAttr(rootDir, options)) {
-    return true;
-  }
-
-  return false;
+  return inConfig(gitDir) || inAttr(gitDir);
 };
 
 module.exports = isInstalled;

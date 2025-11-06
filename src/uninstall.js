@@ -3,8 +3,8 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const spawnSync = require("node:child_process").spawnSync;
-const getRoot = require("./get-root.js");
 const { getGitDir } = require("./get-git-dir.js");
+const gitBin = require("./git-bin.js");
 const logger = require("./logger.js");
 const RE = /.* merge\s*=\s*npm-merge-driver-install$/;
 const RE2 = /.* merge\s*=\s*npm-merge-driver$/;
@@ -12,40 +12,40 @@ const RE2 = /.* merge\s*=\s*npm-merge-driver$/;
 const uninstall = (cwd, options) => {
   const logger_ = options?.logger || logger;
   const env = options?.env || process.env;
-  const rootDir = getRoot(cwd, options);
+  const proc = options?.process || process;
+  const getGitDir_ = options?.getGitDir || getGitDir;
+  const workingDir = cwd || env.INIT_CWD || proc.cwd();
+  const gitDir = getGitDir_(workingDir, options);
 
-  // we dont check isInstalled here as isInstalled returns true
-  // for full installs only
-  if (rootDir) {
+  if (gitDir) {
     // remove git config settings
-    spawnSync("git", ["config", "--local", "--remove-section", "merge.npm-merge-driver-install"], {
-      cwd: rootDir,
+    spawnSync(gitBin, ["config", "--local", "--remove-section", "merge.npm-merge-driver-install"], {
+      cwd: workingDir,
       env,
     });
 
-    spawnSync("git", ["config", "--local", "--remove-section", "merge.npm-merge-driver"], { cwd: rootDir, env });
+    spawnSync(gitBin, ["config", "--local", "--remove-section", "merge.npm-merge-driver"], {
+      cwd: workingDir,
+      env,
+    });
 
-    const gitDir = getGitDir(rootDir, options);
+    const attrFile = path.join(gitDir, "info", "attributes");
 
-    if (gitDir) {
-      const attrFile = path.join(gitDir, "info", "attributes");
+    // remove git attributes
+    if (fs.existsSync(attrFile)) {
+      let attrContents = "";
 
-      // remove git attributes
-      if (fs.existsSync(attrFile)) {
-        let attrContents = "";
-
-        try {
-          attrContents = fs
-            .readFileSync(attrFile, "utf8")
-            .split(/\r?\n/)
-            .filter((line) => !(line.match(RE) || line.match(RE2)))
-            .join("\n");
-        } catch (_e) {
-          // some issue we cannot handle
-        }
-
-        fs.writeFileSync(attrFile, attrContents);
+      try {
+        attrContents = fs
+          .readFileSync(attrFile, "utf8")
+          .split(/\r?\n/)
+          .filter((line) => !(line.match(RE) || line.match(RE2)))
+          .join("\n");
+      } catch (_e) {
+        // some issue we cannot handle
       }
+
+      fs.writeFileSync(attrFile, attrContents);
     }
   }
 

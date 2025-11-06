@@ -6,6 +6,7 @@ const path = require("node:path");
 const fs = require("node:fs");
 const logger = require("./logger.js");
 const os = require("node:os");
+const gitBin = require("./git-bin.js");
 
 const currentVersion = process.argv[2];
 const ancestorVersion = process.argv[3];
@@ -13,7 +14,7 @@ const otherVersion = process.argv[4];
 const file = process.argv[5];
 
 logger.log(`attempting to merge ${file} via npm i --package-lock-only`);
-const ret = spawnSync("git", ["merge-file", "-p", currentVersion, ancestorVersion, otherVersion], {
+const ret = spawnSync(gitBin, ["merge-file", "-p", currentVersion, ancestorVersion, otherVersion], {
   stdio: [0, "pipe", 2],
 });
 
