@@ -1,6 +1,6 @@
 name: ci
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   should-skip:
@@ -23,26 +23,25 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        node: [14, 16, 18, 20, 22]
+        node: [20, 21, 22, 23, 24, 25]
     runs-on: ${{matrix.os}}
     steps:
+      - name: checkout code
+        uses: actions/checkout@v4
 
-    - name: checkout code
-      uses: actions/checkout@v4
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{matrix.node}}"
+          cache: npm
 
-    - name: setup node
-      uses: actions/setup-node@v4
-      with:
-        node-version: '${{matrix.node}}'
-        cache: npm
+      # turn off the default setup-node problem watchers...
+      - run: echo "::remove-matcher owner=eslint-compact::"
+      - run: echo "::remove-matcher owner=eslint-stylish::"
+      - run: echo "::remove-matcher owner=tsc::"
 
-    # turn off the default setup-node problem watchers...
-    - run: echo "::remove-matcher owner=eslint-compact::"
-    - run: echo "::remove-matcher owner=eslint-stylish::"
-    - run: echo "::remove-matcher owner=tsc::"
+      - name: npm install
+        run: npm i --prefer-offline --no-audit
 
-    - name: npm install
-      run: npm i --prefer-offline --no-audit
-
-    - name: run npm test
-      run: npm run test
+      - name: run npm test
+        run: npm run test
