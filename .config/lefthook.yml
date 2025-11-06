@@ -1,0 +1,16 @@
+rc: .config/lefthookrc
+
+pre-commit:
+  parallel: true
+  commands:
+    vjsstandard:
+      glob: "*.js"
+      run: vjsstandard --fix {staged_files}
+      stage_fixed: true
+      fail_text: "vjsstandard linting failed"
+
+    doctoc:
+      glob: "README.md"
+      run: doctoc --no-title {staged_files}
+      stage_fixed: true
+      fail_text: "doctoc failed to update README table of contents"
