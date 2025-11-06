@@ -46,11 +46,22 @@ const sharedHooks = {
     await fs.writeFile(path.join(t.context.template, ".gitignore"), "node_modules\n");
 
     // create the package.json
-    return promiseSpawn("npm", ["init", "-y"], { cwd: t.context.template })
-      .then((_result) => {
-        // create the .git dir
-        return promiseSpawn("git", ["init"], { cwd: t.context.template });
-      })
+    const packageJson = {
+      name: "test-package",
+      version: "1.0.0",
+      description: "",
+      main: "index.js",
+      scripts: {
+        test: 'echo "Error: no test specified" && exit 1',
+      },
+      keywords: [],
+      author: "",
+      license: "ISC",
+    };
+    await fs.writeFile(path.join(t.context.template, "package.json"), JSON.stringify(packageJson, null, 2));
+
+    // create the .git dir
+    return promiseSpawn("git", ["init"], { cwd: t.context.template })
       .then((_result) => promiseSpawn("npm", ["install", "--package-lock-only"]))
       .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.template }))
       .then((_result) =>
