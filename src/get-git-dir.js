@@ -1,6 +1,6 @@
-const spawnSync = require('child_process').spawnSync;
-const fs = require('fs');
-const path = require('path');
+const spawnSync = require("node:child_process").spawnSync;
+const fs = require("node:fs");
+const path = require("node:path");
 
 /**
  * Gets the actual git directory path, supporting both normal repositories and worktrees.
@@ -12,24 +12,24 @@ const path = require('path');
  * @return {string} The path to the git directory, or empty string if not found
  */
 const getGitDir = (rootDir, options) => {
-  const env = options && options.env || process.env;
+  const env = options?.env || process.env;
 
   if (!rootDir) {
-    return '';
+    return "";
   }
 
   // Use git rev-parse --git-dir to get the actual git directory
   // This works for both normal repos and worktrees
-  const gitDirResult = spawnSync('git', ['rev-parse', '--git-dir'], {cwd: rootDir, env});
+  const gitDirResult = spawnSync("git", ["rev-parse", "--git-dir"], { cwd: rootDir, env });
 
   if (gitDirResult.status !== 0) {
-    return '';
+    return "";
   }
 
-  const gitDir = gitDirResult.stdout ? gitDirResult.stdout.toString().trim() : '';
+  const gitDir = gitDirResult.stdout ? gitDirResult.stdout.toString().trim() : "";
 
   if (!gitDir) {
-    return '';
+    return "";
   }
 
   // Convert to absolute path if relative
@@ -37,7 +37,7 @@ const getGitDir = (rootDir, options) => {
 
   // Verify the git directory exists
   if (!fs.existsSync(absoluteGitDir)) {
-    return '';
+    return "";
   }
 
   return absoluteGitDir;
@@ -54,24 +54,24 @@ const getGitDir = (rootDir, options) => {
  * @return {string} The path to the common git directory, or empty string if not found
  */
 const getGitCommonDir = (rootDir, options) => {
-  const env = options && options.env || process.env;
+  const env = options?.env || process.env;
 
   if (!rootDir) {
-    return '';
+    return "";
   }
 
   // Use git rev-parse --git-common-dir to get the common git directory
   // This is where shared config lives in worktrees
-  const gitCommonDirResult = spawnSync('git', ['rev-parse', '--git-common-dir'], {cwd: rootDir, env});
+  const gitCommonDirResult = spawnSync("git", ["rev-parse", "--git-common-dir"], { cwd: rootDir, env });
 
   if (gitCommonDirResult.status !== 0) {
-    return '';
+    return "";
   }
 
-  const gitCommonDir = gitCommonDirResult.stdout ? gitCommonDirResult.stdout.toString().trim() : '';
+  const gitCommonDir = gitCommonDirResult.stdout ? gitCommonDirResult.stdout.toString().trim() : "";
 
   if (!gitCommonDir) {
-    return '';
+    return "";
   }
 
   // Convert to absolute path if relative
@@ -79,10 +79,10 @@ const getGitCommonDir = (rootDir, options) => {
 
   // Verify the common git directory exists
   if (!fs.existsSync(absoluteGitCommonDir)) {
-    return '';
+    return "";
   }
 
   return absoluteGitCommonDir;
 };
 
-module.exports = {getGitDir, getGitCommonDir};
+module.exports = { getGitDir, getGitCommonDir };

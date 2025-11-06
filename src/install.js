@@ -1,76 +1,77 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
-const path = require('path');
-const fs = require('fs');
-const spawnSync = require('child_process').spawnSync;
-const getRoot = require('./get-root.js');
-const {getGitDir} = require('./get-git-dir.js');
-const logger = require('./logger.js');
-const uninstall = require('./uninstall.js');
-const noop = require('./noop.js');
 
-const install = function(cwd, options) {
-  const logger_ = options && options.logger || logger;
-  const env = options && options.env || process.env;
-  const getRoot_ = options && options.getRoot || getRoot;
-  const getGitDir_ = options && options.getGitDir || getGitDir;
+const path = require("node:path");
+const fs = require("node:fs");
+const spawnSync = require("node:child_process").spawnSync;
+const getRoot = require("./get-root.js");
+const { getGitDir } = require("./get-git-dir.js");
+const logger = require("./logger.js");
+const uninstall = require("./uninstall.js");
+const noop = require("./noop.js");
+
+const install = (cwd, options) => {
+  const logger_ = options?.logger || logger;
+  const env = options?.env || process.env;
+  const getRoot_ = options?.getRoot || getRoot;
+  const getGitDir_ = options?.getGitDir || getGitDir;
   const rootDir = getRoot_(cwd, options);
 
   if (!rootDir) {
-    logger_.log('Current working directory is not using git or git is not installed, skipping install.');
+    logger_.log("Current working directory is not using git or git is not installed, skipping install.");
     return 1;
   }
 
-  uninstall(rootDir, {logger: {log: noop}});
+  uninstall(rootDir, { logger: { log: noop } });
 
-  const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
+  const mergePath = path.relative(rootDir, path.resolve(__dirname, "merge.js"));
   const gitDir = getGitDir_(rootDir, options);
 
   if (!gitDir) {
-    logger_.log('Failed to get git directory');
+    logger_.log("Failed to get git directory");
     return 1;
   }
 
-  const infoDir = path.join(gitDir, 'info');
+  const infoDir = path.join(gitDir, "info");
 
   if (!fs.existsSync(infoDir)) {
-    fs.mkdirSync(infoDir, {recursive: true});
+    fs.mkdirSync(infoDir, { recursive: true });
   }
 
   // add to git config
   const configOne = spawnSync(
-    'git',
-    ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge npm lockfiles'],
-    {cwd: rootDir, env}
+    "git",
+    ["config", "--local", "merge.npm-merge-driver-install.name", "automatically merge npm lockfiles"],
+    { cwd: rootDir, env },
   );
   const configTwo = spawnSync(
-    'git',
-    ['config', '--local', 'merge.npm-merge-driver-install.driver', `node '${mergePath}' %A %O %B %P`],
-    {cwd: rootDir, env}
+    "git",
+    ["config", "--local", "merge.npm-merge-driver-install.driver", `node '${mergePath}' %A %O %B %P`],
+    { cwd: rootDir, env },
   );
 
   if (configOne.status !== 0 || configTwo.status !== 0) {
-    logger_.log('Failed to configure npm-merge-driver-install in git directory');
+    logger_.log("Failed to configure npm-merge-driver-install in git directory");
     return 1;
   }
 
   // add to attributes file
-  const attrFile = path.join(infoDir, 'attributes');
-  let attrContents = '';
+  const attrFile = path.join(infoDir, "attributes");
+  let attrContents = "";
 
   if (fs.existsSync(attrFile)) {
-    attrContents = fs.readFileSync(attrFile, 'utf8').trim();
+    attrContents = fs.readFileSync(attrFile, "utf8").trim();
   }
 
   if (attrContents && !attrContents.match(/[\n\r]$/g)) {
-    attrContents = '\n';
+    attrContents = "\n";
   }
-  attrContents += 'npm-shrinkwrap.json merge=npm-merge-driver-install\n';
-  attrContents += 'package-lock.json merge=npm-merge-driver-install\n';
+  attrContents += "npm-shrinkwrap.json merge=npm-merge-driver-install\n";
+  attrContents += "package-lock.json merge=npm-merge-driver-install\n";
 
   fs.writeFileSync(attrFile, attrContents);
 
-  logger_.log('installed successfully');
+  logger_.log("installed successfully");
 
   return 0;
 };
@@ -84,4 +85,3 @@ if (require.main === module) {
 
   process.exit(exitCode);
 }
-

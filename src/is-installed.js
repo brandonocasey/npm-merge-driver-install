@@ -1,47 +1,48 @@
 #!/usr/bin/env node
-const getRoot = require('./get-root.js');
-const {getGitDir} = require('./get-git-dir.js');
-const path = require('path');
-const fs = require('fs');
 
-const inConfig = function(cwd, options) {
+const getRoot = require("./get-root.js");
+const { getGitDir } = require("./get-git-dir.js");
+const path = require("node:path");
+const fs = require("node:fs");
+
+const inConfig = (cwd, options) => {
   const gitDir = getGitDir(cwd, options);
 
   if (!gitDir) {
     return false;
   }
 
-  const gitConfigPath = path.join(gitDir, 'config');
+  const gitConfigPath = path.join(gitDir, "config");
 
   if (!fs.existsSync(gitConfigPath)) {
     return false;
   }
 
-  const config = fs.readFileSync(gitConfigPath, 'utf8');
+  const config = fs.readFileSync(gitConfigPath, "utf8");
 
-  return (/npm-merge-driver-install/i).test(config);
+  return /npm-merge-driver-install/i.test(config);
 };
 
-const inAttr = function(cwd, options) {
+const inAttr = (cwd, options) => {
   const gitDir = getGitDir(cwd, options);
 
   if (!gitDir) {
     return false;
   }
 
-  const gitAttrPath = path.join(gitDir, 'info', 'attributes');
+  const gitAttrPath = path.join(gitDir, "info", "attributes");
 
   if (!fs.existsSync(gitAttrPath)) {
     return false;
   }
 
-  const attr = fs.readFileSync(gitAttrPath, 'utf8');
+  const attr = fs.readFileSync(gitAttrPath, "utf8");
 
-  return (/npm-merge-driver-install/i).test(attr);
+  return /npm-merge-driver-install/i.test(attr);
 };
 
-const isInstalled = function(cwd, options) {
-  const getRoot_ = options && options.getRoot || getRoot;
+const isInstalled = (cwd, options) => {
+  const getRoot_ = options?.getRoot || getRoot;
   const rootDir = getRoot_(cwd, options);
 
   if (!rootDir) {

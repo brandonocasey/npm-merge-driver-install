@@ -1,33 +1,33 @@
-const spawnSync = require('child_process').spawnSync;
-const fs = require('fs');
-const path = require('path');
+const spawnSync = require("node:child_process").spawnSync;
+const fs = require("node:fs");
+const path = require("node:path");
 
 const getRoot = (cwd, options) => {
-  const process_ = options && options.process || process;
-  const env = options && options.env || process.env;
+  const process_ = options?.process || process;
+  const env = options?.env || process.env;
 
   if (!cwd) {
     cwd = env.INIT_CWD ? env.INIT_CWD : process_.cwd();
   }
-  const gitRootResult = spawnSync('git', ['rev-parse', '--show-toplevel'], {cwd, env});
-  const rootDir = gitRootResult.stdout ? gitRootResult.stdout.toString().trim() : '';
+  const gitRootResult = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd, env });
+  const rootDir = gitRootResult.stdout ? gitRootResult.stdout.toString().trim() : "";
 
   if (gitRootResult.status !== 0 || !rootDir) {
-    return '';
+    return "";
   }
 
   // Verify git directory exists (supports both normal repos and worktrees)
-  const gitDirPath = path.join(rootDir, '.git');
+  const gitDirPath = path.join(rootDir, ".git");
 
   if (!fs.existsSync(gitDirPath)) {
-    return '';
+    return "";
   }
 
   // Check if .git is a file (worktree) or directory (normal repo)
   const stats = fs.statSync(gitDirPath);
 
-  if (!stats.isDirectory() && !stats.isFile()) {
-    return '';
+  if (!(stats.isDirectory() || stats.isFile())) {
+    return "";
   }
 
   return rootDir;
