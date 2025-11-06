@@ -19,7 +19,6 @@
     "npm-merge-driver-is-installed": "src/is-installed.js"
   },
   "homepage": "https://github.com/brandonocasey/npm-merge-driver-install",
-  "keywords": [],
   "engines": {
     "node": ">=12"
   },
@@ -39,7 +38,7 @@
     "conventional-changelog-cli": "5.0.0",
     "conventional-changelog-videojs": "3.0.2",
     "doctoc": "2.2.1",
-    "install-local": "4.1.0",
+    "install-local": "3.0.1",
     "lefthook": "2.0.1",
     "not-prerelease": "1.0.1",
     "npm-run-all2": "8.0.4",

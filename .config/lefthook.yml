@@ -3,11 +3,11 @@ rc: .config/lefthookrc
 pre-commit:
   parallel: true
   commands:
-    vjsstandard:
-      glob: "*.js"
-      run: vjsstandard --fix {staged_files}
+    biome:
+      glob: "*.{js,json,jsonc}"
+      run: npx biome check --write {staged_files}
       stage_fixed: true
-      fail_text: "vjsstandard linting failed"
+      fail_text: "biome linting failed"
 
     doctoc:
       glob: "README.md"
