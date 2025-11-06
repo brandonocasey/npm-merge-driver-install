@@ -1,6 +1,6 @@
 const test = require('ava');
 const path = require('path');
-const shell = require('shelljs');
+const fs = require('fs');
 const os = require('os');
 const install = require('../src/install.js');
 const uninstall = require('../src/uninstall.js');
@@ -41,7 +41,7 @@ test('can uninstall', (t) => {
 });
 
 test('does not fail without .git', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git'));
+  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
   const exitCode = t.context.uninstall();
 
   t.false(isInstalled(t.context.dir));
@@ -73,7 +73,7 @@ test('does not fail without git binary', (t) => {
 });
 
 test('does not fail without .git/info directory', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git', 'info'));
+  fs.rmSync(path.join(t.context.dir, '.git', 'info'), {recursive: true, force: true});
   const exitCode = t.context.uninstall();
 
   t.false(isInstalled(t.context.dir));
@@ -86,7 +86,7 @@ test('does not fail without .git/info directory', (t) => {
 test('does not fail without existing attributes file', (t) => {
   const attrFile = path.join(t.context.dir, '.git', 'info', 'attributes');
 
-  shell.rm('-f', attrFile);
+  fs.rmSync(attrFile, {force: true});
   const exitCode = t.context.uninstall();
 
   t.false(isInstalled(t.context.dir));

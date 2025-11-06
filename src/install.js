@@ -4,6 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const spawnSync = require('child_process').spawnSync;
 const getRoot = require('./get-root.js');
+const {getGitDir} = require('./get-git-dir.js');
 const logger = require('./logger.js');
 const uninstall = require('./uninstall.js');
 const noop = require('./noop.js');
@@ -12,6 +13,7 @@ const install = function(cwd, options) {
   const logger_ = options && options.logger || logger;
   const env = options && options.env || process.env;
   const getRoot_ = options && options.getRoot || getRoot;
+  const getGitDir_ = options && options.getGitDir || getGitDir;
   const rootDir = getRoot_(cwd, options);
 
   if (!rootDir) {
@@ -22,10 +24,17 @@ const install = function(cwd, options) {
   uninstall(rootDir, {logger: {log: noop}});
 
   const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
-  const infoDir = path.join(rootDir, '.git', 'info');
+  const gitDir = getGitDir_(rootDir, options);
+
+  if (!gitDir) {
+    logger_.log('Failed to get git directory');
+    return 1;
+  }
+
+  const infoDir = path.join(gitDir, 'info');
 
   if (!fs.existsSync(infoDir)) {
-    fs.mkdirSync(infoDir);
+    fs.mkdirSync(infoDir, {recursive: true});
   }
 
   // add to git config

@@ -1,6 +1,5 @@
 const test = require('ava');
 const path = require('path');
-const shell = require('shelljs');
 const fs = require('fs');
 const os = require('os');
 const install = require('../src/install.js');
@@ -24,7 +23,7 @@ test.afterEach.always(sharedHooks.afterEach);
 test.after.always(sharedHooks.after);
 
 test('does not install without .git', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git'));
+  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
 
   const exitCode = t.context.install();
 
@@ -56,9 +55,26 @@ test('does not install with bad git command', (t) => {
   ].sort());
 });
 
+test('can fail on getting git directory', (t) => {
+  const exitCode = t.context.install({
+    getRoot: () => t.context.dir,
+    getGitDir: () => ''
+  });
+
+  t.false(isInstalled(t.context.dir));
+  t.is(exitCode, 1);
+  t.deepEqual(t.context.logs.sort(), [
+    'Failed to get git directory'
+  ].sort());
+});
+
 test('can fail on git config', (t) => {
   const env = t.context.fakegit();
-  const exitCode = t.context.install({env, getRoot: () => t.context.dir});
+  const exitCode = t.context.install({
+    env,
+    getRoot: () => t.context.dir,
+    getGitDir: () => path.join(t.context.dir, '.git')
+  });
 
   t.false(isInstalled(t.context.dir));
   t.is(exitCode, 1);
@@ -97,7 +113,7 @@ test('does not install twice', (t) => {
 });
 
 test('does not fail without .git/info directory', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git', 'info'));
+  fs.rmSync(path.join(t.context.dir, '.git', 'info'), {recursive: true, force: true});
   const exitCode = t.context.install();
 
   t.true(isInstalled(t.context.dir));

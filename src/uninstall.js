@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const spawnSync = require('child_process').spawnSync;
 const getRoot = require('./get-root.js');
+const {getGitDir} = require('./get-git-dir.js');
 const logger = require('./logger.js');
 const RE = new RegExp('.* merge\\s*=\\s*npm-merge-driver-install$');
 const RE2 = new RegExp('.* merge\\s*=\\s*npm-merge-driver$');
@@ -28,23 +29,27 @@ const uninstall = function(cwd, options) {
       {cwd: rootDir, env}
     );
 
-    const attrFile = path.join(rootDir, '.git', 'info', 'attributes');
+    const gitDir = getGitDir(rootDir, options);
 
-    // remove git attributes
-    if (fs.existsSync(attrFile)) {
-      let attrContents = '';
+    if (gitDir) {
+      const attrFile = path.join(gitDir, 'info', 'attributes');
 
-      try {
-        attrContents = fs
-          .readFileSync(attrFile, 'utf8')
-          .split(/\r?\n/)
-          .filter(line => !line.match(RE) && !line.match(RE2))
-          .join('\n');
-      } catch (e) {
-        // some issue we cannot handle
+      // remove git attributes
+      if (fs.existsSync(attrFile)) {
+        let attrContents = '';
+
+        try {
+          attrContents = fs
+            .readFileSync(attrFile, 'utf8')
+            .split(/\r?\n/)
+            .filter(line => !line.match(RE) && !line.match(RE2))
+            .join('\n');
+        } catch (e) {
+          // some issue we cannot handle
+        }
+
+        fs.writeFileSync(attrFile, attrContents);
       }
-
-      fs.writeFileSync(attrFile, attrContents);
     }
   }
 
