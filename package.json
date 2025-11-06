@@ -1,7 +1,7 @@
 {
   "name": "npm-merge-driver-install",
   "version": "4.0.0-0",
-  "description": "A package to install npm-merge-driver locally and automatically.",
+  "description": "Automatically merge package manager lockfiles (npm, pnpm, yarn, bun, deno) during git merges.",
   "repository": {
     "type": "git",
     "url": "https://github.com/brandonocasey/npm-merge-driver-install"
@@ -23,7 +23,7 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "biome check .",
+    "lint": "biome ci .",
     "test": "npm-run-all2 -c -p lint test:*",
     "test:unit": "nyc --reporter=json --reporter=text ava --timeout 1m test/*.test.js",
     "preversion": "npm test",
