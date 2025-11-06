@@ -20,12 +20,12 @@
   },
   "homepage": "https://github.com/brandonocasey/npm-merge-driver-install",
   "keywords": [],
-  "engine": {
-    "node": ">=8"
+  "engines": {
+    "node": ">=12"
   },
   "scripts": {
     "lint": "vjsstandard",
-    "test": "npm-run-all -c -p lint test:*",
+    "test": "npm-run-all2 -c -p lint test:*",
     "test:unit": "nyc --reporter=json --reporter=text ava --timeout 1m './test/*.test.js'",
     "preversion": "npm test",
     "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
@@ -33,28 +33,18 @@
     "prepublishOnly": "vjsverify --skip-syntax --verbose"
   },
   "devDependencies": {
-    "@brandonocasey/spawn-promise": "^0.2.0",
-    "ava": "^3.15.0",
-    "conventional-changelog-cli": "^2.1.1",
-    "conventional-changelog-videojs": "^3.0.2",
-    "doctoc": "^2.1.0",
-    "husky": "^4.3.8",
-    "install-local": "^3.0.1",
-    "lint-staged": "^12.1.2",
-    "not-prerelease": "^1.0.1",
-    "npm-run-all": "4.1.5",
-    "nyc": "15.1.0",
-    "uuid": "^8.3.2",
-    "videojs-generator-verify": "~4.0.1",
-    "videojs-standard": "^9.0.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.js": "vjsstandard --fix",
-    "README.md": "doctoc --no-title"
+    "@brandonocasey/spawn-promise": "0.2.0",
+    "ava": "6.4.1",
+    "conventional-changelog-cli": "5.0.0",
+    "conventional-changelog-videojs": "3.0.2",
+    "doctoc": "2.2.1",
+    "install-local": "4.1.0",
+    "lefthook": "2.0.1",
+    "not-prerelease": "1.0.1",
+    "npm-run-all2": "8.0.4",
+    "nyc": "17.1.0",
+    "uuid": "13.0.0",
+    "videojs-generator-verify": "4.1.3",
+    "videojs-standard": "9.1.0"
   }
 }
