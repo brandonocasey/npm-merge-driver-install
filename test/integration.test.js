@@ -1,6 +1,5 @@
 const test = require("ava");
 const { promiseSpawn, sharedHooks } = require("./helpers.js");
-const gitBin = require("../src/git-bin.js");
 
 test.before(sharedHooks.before);
 test.beforeEach(async (t) => {
@@ -12,9 +11,9 @@ test.beforeEach(async (t) => {
     .then((_result) =>
       promiseSpawn("npm", ["i", "--package-lock-only", "-D", "not-prerelease"], { cwd: t.context.dir }),
     )
-    .then((_result) => promiseSpawn(gitBin, ["add", "--all"], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.dir }))
     .then((_result) =>
-      promiseSpawn(gitBin, ["commit", "-a", "-m", '"add not-prerelease to dev deps"'], { cwd: t.context.dir }),
+      promiseSpawn("git", ["commit", "-a", "-m", '"add not-prerelease to dev deps"'], { cwd: t.context.dir }),
     );
 });
 test.afterEach.always(sharedHooks.afterEach);
@@ -23,25 +22,23 @@ test.after.always(sharedHooks.after);
 test("can merge package-lock only changes", (t) => {
   let mainBranch;
 
-  return promiseSpawn(gitBin, ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: t.context.dir })
+  return promiseSpawn("git", ["rev-parse", "--abbrev-ref", "HEAD"], { cwd: t.context.dir })
     .then((result) => {
       mainBranch = result.stdout.toString().trim();
 
-      return promiseSpawn(gitBin, ["checkout", "-b", "merge-driver-test"], { cwd: t.context.dir });
+      return promiseSpawn("git", ["checkout", "-b", "merge-driver-test"], { cwd: t.context.dir });
     })
     .then((_result) => promiseSpawn("npm", ["i", "--package-lock-only", "-D", "express"], { cwd: t.context.dir }))
-    .then((_result) => promiseSpawn(gitBin, ["add", "--all"], { cwd: t.context.dir }))
-    .then((_result) =>
-      promiseSpawn(gitBin, ["commit", "-a", "-m", '"add express to dev deps"'], { cwd: t.context.dir }),
-    )
-    .then((_result) => promiseSpawn(gitBin, ["checkout", mainBranch], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["commit", "-a", "-m", '"add express to dev deps"'], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["checkout", mainBranch], { cwd: t.context.dir }))
     .then((_result) => promiseSpawn("npm", ["i", "--package-lock-only", "express"], { cwd: t.context.dir }))
-    .then((_result) => promiseSpawn(gitBin, ["add", "--all"], { cwd: t.context.dir }))
-    .then((_result) => promiseSpawn(gitBin, ["commit", "-a", "-m", '"add express as dep"'], { cwd: t.context.dir }))
-    .then((_result) => promiseSpawn(gitBin, ["merge", "--no-edit", "merge-driver-test"], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["commit", "-a", "-m", '"add express as dep"'], { cwd: t.context.dir }))
+    .then((_result) => promiseSpawn("git", ["merge", "--no-edit", "merge-driver-test"], { cwd: t.context.dir }))
     .then((result) => {
       t.regex(result.stdout, /npm-merge-driver-install: package-lock.json merged successfully/, "merge happened");
-      return promiseSpawn(gitBin, ["ls-files", "-u"], { cwd: t.context.dir });
+      return promiseSpawn("git", ["ls-files", "-u"], { cwd: t.context.dir });
     })
     .then((_result) => {
       // if we get nothing back from ls-files

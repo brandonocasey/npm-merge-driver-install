@@ -2,9 +2,8 @@
 
 const fs = require("node:fs");
 const path = require("node:path");
-const spawnSync = require("node:child_process").spawnSync;
+const { sync: spawnSync } = require("cross-spawn");
 const { getGitDir } = require("./get-git-dir.js");
-const gitBin = require("./git-bin.js");
 const logger = require("./logger.js");
 const RE = /.* merge\s*=\s*npm-merge-driver-install$/;
 const RE2 = /.* merge\s*=\s*npm-merge-driver$/;
@@ -19,12 +18,12 @@ const uninstall = (cwd, options) => {
 
   if (gitDir) {
     // remove git config settings
-    spawnSync(gitBin, ["config", "--local", "--remove-section", "merge.npm-merge-driver-install"], {
+    spawnSync("git", ["config", "--local", "--remove-section", "merge.npm-merge-driver-install"], {
       cwd: workingDir,
       env,
     });
 
-    spawnSync(gitBin, ["config", "--local", "--remove-section", "merge.npm-merge-driver"], {
+    spawnSync("git", ["config", "--local", "--remove-section", "merge.npm-merge-driver"], {
       cwd: workingDir,
       env,
     });

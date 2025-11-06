@@ -22,8 +22,28 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         node: [20, 21, 22, 23, 24, 25]
+        target: [ubuntu, macos, windows, windows-wsl]
+        exclude:
+          - target: windows-wsl
+            node: 21
+          - target: windows-wsl
+            node: 23
+          - target: windows-wsl
+            node: 24
+        include:
+          - target: ubuntu
+            os: ubuntu-latest
+            use-wsl: "false"
+          - target: macos
+            os: macos-latest
+            use-wsl: "false"
+          - target: windows
+            os: windows-latest
+            use-wsl: "false"
+          - target: windows-wsl
+            os: windows-latest
+            use-wsl: "true"
     runs-on: ${{matrix.os}}
     steps:
       - name: checkout code
@@ -34,14 +54,58 @@ jobs:
         with:
           node-version: "${{matrix.node}}"
           cache: npm
+        if: ${{ matrix.use-wsl != 'true' }}
 
       # turn off the default setup-node problem watchers...
       - run: echo "::remove-matcher owner=eslint-compact::"
+        if: ${{ matrix.use-wsl != 'true' }}
       - run: echo "::remove-matcher owner=eslint-stylish::"
+        if: ${{ matrix.use-wsl != 'true' }}
       - run: echo "::remove-matcher owner=tsc::"
+        if: ${{ matrix.use-wsl != 'true' }}
 
       - name: npm install
         run: npm i --prefer-offline --no-audit
+        if: ${{ matrix.use-wsl != 'true' }}
 
       - name: run npm test
         run: npm run test
+        if: ${{ matrix.use-wsl != 'true' }}
+
+      - name: setup wsl
+        uses: Vampire/setup-wsl@v6
+        with:
+          distribution: Ubuntu-22.04
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: determine wsl workspace path
+        id: wsl
+        shell: pwsh
+        run: |
+          $winPath = '${{ github.workspace }}'
+          $posixPath = $winPath -replace '\\', '/'
+          $workspace = wsl wslpath -a $posixPath
+          "workspace=$workspace" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: install Node.js and run tests inside WSL
+        shell: pwsh
+        env:
+          NODE_VERSION: ${{ matrix.node }}
+          WSL_WORKSPACE: ${{ steps.wsl.outputs.workspace }}
+        run: |
+          $bashScript = @'
+          set -euo pipefail
+          export NVM_DIR="$HOME/.nvm"
+          if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          fi
+          . "$NVM_DIR/nvm.sh"
+          nvm install $NODE_VERSION
+          nvm use $NODE_VERSION
+          cd "$WSL_WORKSPACE"
+          npm install --prefer-offline --no-audit
+          npm test
+          '@
+          wsl bash -lc $bashScript
+        if: ${{ matrix.use-wsl == 'true' }}

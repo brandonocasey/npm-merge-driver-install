@@ -3,9 +3,8 @@
 
 const path = require("node:path");
 const fs = require("node:fs");
-const spawnSync = require("node:child_process").spawnSync;
+const { sync: spawnSync } = require("cross-spawn");
 const { getGitDir } = require("./get-git-dir.js");
-const gitBin = require("./git-bin.js");
 const logger = require("./logger.js");
 const uninstall = require("./uninstall.js");
 const noop = require("./noop.js");
@@ -35,12 +34,12 @@ const install = (cwd, options) => {
 
   // add to git config
   const configOne = spawnSync(
-    gitBin,
+    "git",
     ["config", "--local", "merge.npm-merge-driver-install.name", "automatically merge npm lockfiles"],
     { cwd: workingDir, env },
   );
   const configTwo = spawnSync(
-    gitBin,
+    "git",
     ["config", "--local", "merge.npm-merge-driver-install.driver", `node '${mergePath}' %A %O %B %P`],
     { cwd: workingDir, env },
   );

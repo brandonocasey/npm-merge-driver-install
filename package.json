@@ -22,6 +22,9 @@
   "engines": {
     "node": ">=20"
   },
+  "dependencies": {
+    "cross-spawn": "7.0.6"
+  },
   "scripts": {
     "lint": "biome ci .",
     "test": "npm-run-all2 -c -p lint test:*",

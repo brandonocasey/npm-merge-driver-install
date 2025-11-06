@@ -1,11 +1,10 @@
 const path = require("node:path");
-const { spawn } = require("node:child_process");
+const spawn = require("cross-spawn");
 const fs = require("node:fs/promises");
 const fsSync = require("node:fs");
 const installLocalBin = require.resolve("install-local/bin/install-local");
 const isInstalled = require("../src/is-installed.js");
 const os = require("node:os");
-const gitBin = require("../src/git-bin.js");
 
 const BASE_DIR = path.resolve(__dirname, "..");
 const TEMP_DIR = os.tmpdir();
@@ -97,16 +96,16 @@ const sharedHooks = {
     await fs.writeFile(path.join(t.context.template, "package.json"), JSON.stringify(packageJson, null, 2));
 
     // create the .git dir
-    return promiseSpawn(gitBin, ["init"], { cwd: t.context.template })
+    return promiseSpawn("git", ["init"], { cwd: t.context.template })
       .then((_result) => promiseSpawn("npm", ["install", "--package-lock-only"], { cwd: t.context.template }))
-      .then((_result) => promiseSpawn(gitBin, ["add", "--all"], { cwd: t.context.template }))
+      .then((_result) => promiseSpawn("git", ["add", "--all"], { cwd: t.context.template }))
       .then((_result) =>
-        promiseSpawn(gitBin, ["config", "--local", "user.email", '"you@example.com"'], { cwd: t.context.template }),
+        promiseSpawn("git", ["config", "--local", "user.email", '"you@example.com"'], { cwd: t.context.template }),
       )
       .then((_result) =>
-        promiseSpawn(gitBin, ["config", "--local", "user.name", '"Your Name"'], { cwd: t.context.template }),
+        promiseSpawn("git", ["config", "--local", "user.name", '"Your Name"'], { cwd: t.context.template }),
       )
-      .then((_result) => promiseSpawn(gitBin, ["commit", "-a", "-m", '"initial"'], { cwd: t.context.template }));
+      .then((_result) => promiseSpawn("git", ["commit", "-a", "-m", '"initial"'], { cwd: t.context.template }));
   },
   beforeEach: async (t) => {
     t.context.old = {
@@ -144,7 +143,7 @@ const sharedHooks = {
 
     t.context.fakegit = () => {
       const separator = os.platform() === "win32" ? ";" : ":";
-      const gitDest = path.join(t.context.dir, gitBin);
+      const gitDest = path.join(t.context.dir, "git");
 
       // move a fake git binary into the temp context dir
       // this will cause git to fail to run

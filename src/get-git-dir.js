@@ -1,5 +1,4 @@
-const { spawnSync } = require("node:child_process");
-const gitBin = require("./git-bin.js");
+const { sync: spawnSync } = require("cross-spawn");
 
 const resolveGitPath = (rootDir, args, options) => {
   if (!rootDir) {
@@ -7,7 +6,7 @@ const resolveGitPath = (rootDir, args, options) => {
   }
 
   const env = options?.env || process.env;
-  const { status, stdout } = spawnSync(gitBin, args, { cwd: rootDir, env, encoding: "utf8" });
+  const { status, stdout } = spawnSync("git", args, { cwd: rootDir, env, encoding: "utf8" });
 
   return status === 0 ? stdout.trim() : "";
 };
