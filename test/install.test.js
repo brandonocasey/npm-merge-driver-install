@@ -1,141 +1,135 @@
-const test = require('ava');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
-const install = require('../src/install.js');
-const isInstalled = require('../src/is-installed.js');
-const {
-  promiseSpawn,
-  BASE_DIR,
-  sharedHooks
-} = require('./helpers.js');
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import install from '../src/install.js';
+import isInstalled from '../src/is-installed.js';
+import { BASE_DIR, promiseSpawn, sharedHooks } from './helpers.js';
 
-test.before(sharedHooks.before);
-test.beforeEach((t) => {
-  sharedHooks.beforeEach(t);
-  t.context.install = function(options) {
-    return install(t.context.dir, Object.assign({
-      logger: t.context.fakeLogger
-    }, options));
-  };
-});
-test.afterEach.always(sharedHooks.afterEach);
-test.after.always(sharedHooks.after);
+describe('install', () => {
+  const context = {};
 
-test('does not install without .git', (t) => {
-  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
-
-  const exitCode = t.context.install();
-
-  t.false(isInstalled(t.context.dir));
-  t.is(exitCode, 1);
-  t.deepEqual(t.context.logs.sort(), [
-    'Current working directory is not using git or git is not installed, skipping install.'
-  ].sort());
-});
-
-test('does not install without git executable', (t) => {
-  const exitCode = t.context.install({env: {PATH: ''}});
-
-  t.false(isInstalled(t.context.dir));
-  t.is(exitCode, 1);
-  t.deepEqual(t.context.logs.sort(), [
-    'Current working directory is not using git or git is not installed, skipping install.'
-  ].sort());
-});
-
-test('does not install with bad git command', (t) => {
-  const env = t.context.fakegit();
-  const exitCode = t.context.install({env});
-
-  t.false(isInstalled(t.context.dir));
-  t.is(exitCode, 1);
-  t.deepEqual(t.context.logs.sort(), [
-    'Current working directory is not using git or git is not installed, skipping install.'
-  ].sort());
-});
-
-test('can fail on git config', (t) => {
-  const env = t.context.fakegit();
-  const exitCode = t.context.install({env, getGitDir: () => path.join(t.context.dir, '.git')});
-
-  t.false(isInstalled(t.context.dir));
-  t.is(exitCode, 1);
-  t.deepEqual(t.context.logs.sort(), [
-    'Failed to configure npm-merge-driver-install in git directory'
-  ].sort());
-});
-
-test('installs as function', (t) => {
-  const exitCode = t.context.install();
-
-  t.true(isInstalled(t.context.dir));
-  t.is(exitCode, 0);
-  t.deepEqual(t.context.logs.sort(), [
-    'installed successfully'
-  ].sort());
-});
-
-test('does not install twice', (t) => {
-  const exitCode = t.context.install();
-
-  t.true(isInstalled(t.context.dir));
-  t.is(exitCode, 0);
-  t.deepEqual(t.context.logs.sort(), [
-    'installed successfully'
-  ].sort());
-
-  const exitCode2 = t.context.install();
-
-  t.true(isInstalled(t.context.dir));
-  t.is(exitCode2, 0);
-  t.deepEqual(t.context.logs.sort(), [
-    'installed successfully',
-    'installed successfully'
-  ].sort());
-});
-
-test('does not fail without .git/info directory', (t) => {
-  fs.rmSync(path.join(t.context.dir, '.git', 'info'), {recursive: true, force: true});
-  const exitCode = t.context.install();
-
-  t.true(isInstalled(t.context.dir));
-  t.is(exitCode, 0);
-  t.deepEqual(t.context.logs.sort(), [
-    'installed successfully'
-  ].sort());
-});
-
-test('does not fail with existing attributes file', (t) => {
-  const attrFile = path.join(t.context.dir, '.git', 'info', 'attributes');
-
-  fs.writeFileSync(attrFile, 'foo');
-  const exitCode = t.context.install();
-
-  t.true(isInstalled(t.context.dir));
-  t.is(exitCode, 0);
-  t.deepEqual(t.context.logs.sort(), [
-    'installed successfully'
-  ].sort());
-});
-
-// windows can't run install.js as a binary
-if (os.platform() !== 'win32') {
-  test('installs if run as binary', (t) => {
-    return promiseSpawn(path.join(BASE_DIR, 'src', 'install.js'), [], {cwd: t.context.dir}).then(function(result) {
-      t.true(isInstalled(t.context.dir));
-      t.is(result.exitCode, 0);
-      t.is(result.stderr, '');
-      t.is(result.stdout, 'npm-merge-driver-install: installed successfully\n');
-    });
+  beforeAll(async () => {
+    await sharedHooks.before(context);
   });
-}
 
-test('installs if run with node', (t) => {
-  return promiseSpawn('node', [path.join(BASE_DIR, 'src', 'install.js')], {cwd: t.context.dir}).then(function(result) {
-    t.true(isInstalled(t.context.dir));
-    t.is(result.exitCode, 0);
-    t.is(result.stderr, '');
-    t.is(result.stdout, 'npm-merge-driver-install: installed successfully\n');
+  beforeEach(() => {
+    sharedHooks.beforeEach(context);
+    context.install = (options) =>
+      install(context.dir, {
+        logger: context.fakeLogger,
+        ...options,
+      });
+  });
+
+  afterEach(() => {
+    sharedHooks.afterEach(context);
+  });
+
+  afterAll(() => {
+    sharedHooks.after(context);
+  });
+
+  test('does not install without .git', () => {
+    fs.rmSync(path.join(context.dir, '.git'), { recursive: true, force: true });
+
+    const exitCode = context.install();
+
+    expect(isInstalled(context.dir)).toBe(false);
+    expect(exitCode).toBe(1);
+    expect(context.logs.sort()).toEqual(
+      ['Current working directory is not using git or git is not installed, skipping install.'].sort(),
+    );
+  });
+
+  test('does not install without git executable', () => {
+    const exitCode = context.install({ env: { PATH: '' } });
+
+    expect(isInstalled(context.dir)).toBe(false);
+    expect(exitCode).toBe(1);
+    expect(context.logs.sort()).toEqual(
+      ['Current working directory is not using git or git is not installed, skipping install.'].sort(),
+    );
+  });
+
+  test('does not install with bad git command', () => {
+    const env = context.fakegit();
+    const exitCode = context.install({ env });
+
+    expect(isInstalled(context.dir)).toBe(false);
+    expect(exitCode).toBe(1);
+    expect(context.logs.sort()).toEqual(
+      ['Current working directory is not using git or git is not installed, skipping install.'].sort(),
+    );
+  });
+
+  test('can fail on git config', () => {
+    const env = context.fakegit();
+    const exitCode = context.install({ env, getGitDir: () => path.join(context.dir, '.git') });
+
+    expect(isInstalled(context.dir)).toBe(false);
+    expect(exitCode).toBe(1);
+    expect(context.logs.sort()).toEqual(['Failed to configure npm-merge-driver-install in git directory'].sort());
+  });
+
+  test('installs as function', () => {
+    const exitCode = context.install();
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode).toBe(0);
+    expect(context.logs.sort()).toEqual(['installed successfully'].sort());
+  });
+
+  test('does not install twice', () => {
+    const exitCode = context.install();
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode).toBe(0);
+    expect(context.logs.sort()).toEqual(['installed successfully'].sort());
+
+    const exitCode2 = context.install();
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode2).toBe(0);
+    expect(context.logs.sort()).toEqual(['installed successfully', 'installed successfully'].sort());
+  });
+
+  test('does not fail without .git/info directory', () => {
+    fs.rmSync(path.join(context.dir, '.git', 'info'), { recursive: true, force: true });
+    const exitCode = context.install();
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode).toBe(0);
+    expect(context.logs.sort()).toEqual(['installed successfully'].sort());
+  });
+
+  test('does not fail with existing attributes file', () => {
+    const attrFile = path.join(context.dir, '.git', 'info', 'attributes');
+
+    fs.writeFileSync(attrFile, 'foo');
+    const exitCode = context.install();
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode).toBe(0);
+    expect(context.logs.sort()).toEqual(['installed successfully'].sort());
+  });
+
+  // windows can't run install.js as a binary
+  if (os.platform() !== 'win32') {
+    test('installs if run as binary', async () => {
+      const result = await promiseSpawn(path.join(BASE_DIR, 'src', 'install.js'), [], { cwd: context.dir });
+      expect(isInstalled(context.dir)).toBe(true);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr).toBe('');
+      expect(result.stdout).toBe('npm-merge-driver-install: installed successfully\n');
+    });
+  }
+
+  test('installs if run with node', async () => {
+    const result = await promiseSpawn('node', [path.join(BASE_DIR, 'src', 'install.js')], { cwd: context.dir });
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toBe('npm-merge-driver-install: installed successfully\n');
   });
 });

@@ -1,0 +1,95 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.4/schema.json",
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "package.json",
+      "vitest.config.js",
+      "src/**/*.{js,cjs,mjs}",
+      "test/**/*.{js,cjs,mjs}",
+      ".config/**/*.{js,cjs,mjs}"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120
+  },
+  "javascript": {
+    "formatter": {
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "always"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "a11y": "error",
+      "complexity": "error",
+      "correctness": "error",
+      "performance": {
+        "recommended": true,
+        "noBarrelFile": "off",
+        "useTopLevelRegex": "off"
+      },
+      "recommended": true,
+      "security": "error",
+      "style": {
+        "recommended": true,
+        "noDefaultExport": "off",
+        "useExportsLast": "off"
+      },
+      "suspicious": {
+        "recommended": true
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["test/**/*.js"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noExcessiveLinesPerFunction": "off"
+          },
+          "correctness": {
+            "noNodejsModules": "off",
+            "noUndeclaredDependencies": "off"
+          },
+          "style": {
+            "noMagicNumbers": "off",
+            "noCommonJs": "off"
+          },
+          "suspicious": {
+            "noEmptyBlockStatements": "off",
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/**/*.js", ".config/**/*.js"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noNodejsModules": "off"
+          },
+          "style": {
+            "useNamingConvention": "off"
+          },
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    }
+  ],
+  "vcs": {
+    "clientKind": "git",
+    "defaultBranch": "main",
+    "enabled": true,
+    "useIgnoreFile": true
+  }
+}

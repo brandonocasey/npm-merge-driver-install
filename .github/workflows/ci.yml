@@ -8,21 +8,8 @@ jobs:
       fail-fast: false
       matrix:
         node: [20, 22, 24]
-        target: [ubuntu, macos, windows, windows-wsl]
-        include:
-          - target: ubuntu
-            os: ubuntu-latest
-            use-wsl: "false"
-          - target: macos
-            os: macos-latest
-            use-wsl: "false"
-          - target: windows
-            os: windows-latest
-            use-wsl: "false"
-          - target: windows-wsl
-            os: windows-latest
-            use-wsl: "true"
-    runs-on: ${{matrix.os}}
+        os: [ubuntu-latest, macos-latest, windows-latest, wsl-ubuntu]
+    runs-on: ${{ matrix.os == 'wsl-ubuntu' && 'windows-latest' || matrix.os }}
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -30,96 +17,92 @@ jobs:
       - name: configure git line endings
         run: git config --global core.autocrlf false
 
+      - name: setup wsl
+        if: matrix.os == 'wsl-ubuntu'
+        uses: Vampire/setup-wsl@v6
+        with:
+          distribution: Ubuntu-22.04
+
+      - name: restore nvm cache (wsl)
+        if: matrix.os == 'wsl-ubuntu'
+        id: cache-nvm
+        uses: actions/cache/restore@v4
+        with:
+          path: nvm-cache.tar.gz
+          key: wsl-nvm-${{ matrix.node }}-${{ hashFiles('.nvmrc', '.node-version') }}
+          restore-keys: |
+            wsl-nvm-${{ matrix.node }}-
+            wsl-nvm-
+
+      - name: extract nvm cache (wsl)
+        if: matrix.os == 'wsl-ubuntu' && steps.cache-nvm.outputs.cache-hit == 'true'
+        shell: wsl-bash {0}
+        run: |
+          if [ -f /mnt/d/a/npm-merge-driver-install/npm-merge-driver-install/nvm-cache.tar.gz ]; then
+            tar -xzf /mnt/d/a/npm-merge-driver-install/npm-merge-driver-install/nvm-cache.tar.gz -C "$HOME"
+          fi
+
+      - name: setup node (wsl)
+        if: matrix.os == 'wsl-ubuntu'
+        shell: wsl-bash {0}
+        run: |
+          set -eo pipefail
+          export NVM_DIR="$HOME/.nvm"
+          if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+          fi
+          . "$NVM_DIR/nvm.sh" --no-use
+          nvm install ${{ matrix.node }}
+
+          # Create profile script to auto-load nvm and use correct node version
+          cat > ~/.bash_profile << 'EOF'
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" --no-use
+          nvm use ${{ matrix.node }} >/dev/null 2>&1
+          EOF
+
       - name: setup node
+        if: matrix.os != 'wsl-ubuntu'
         uses: actions/setup-node@v4
         with:
           node-version: "${{matrix.node}}"
           cache: npm
-        if: ${{ matrix.use-wsl != 'true' }}
 
-      # turn off the default setup-node problem watchers...
-      - run: echo "::remove-matcher owner=eslint-compact::"
-        if: ${{ matrix.use-wsl != 'true' }}
-      - run: echo "::remove-matcher owner=eslint-stylish::"
-        if: ${{ matrix.use-wsl != 'true' }}
-      - run: echo "::remove-matcher owner=tsc::"
-        if: ${{ matrix.use-wsl != 'true' }}
+      - name: remove problem matchers
+        run: |
+          echo "::remove-matcher owner=eslint-compact::"
+          echo "::remove-matcher owner=eslint-stylish::"
+          echo "::remove-matcher owner=tsc::"
+
+      # GitHub Actions doesn't support matrix variables in the shell property
+      # See: https://github.com/actions/runner/issues/444
+      # Therefore we need separate steps for WSL vs non-WSL platforms
+      - name: npm install (wsl)
+        if: matrix.os == 'wsl-ubuntu'
+        shell: wsl-bash {0}
+        run: npm i --prefer-offline --no-audit
 
       - name: npm install
+        if: matrix.os != 'wsl-ubuntu'
         run: npm i --prefer-offline --no-audit
-        if: ${{ matrix.use-wsl != 'true' }}
+
+      - name: run npm test (wsl)
+        if: matrix.os == 'wsl-ubuntu'
+        shell: wsl-bash {0}
+        run: npm run test
+
+      - name: create nvm cache archive (wsl)
+        if: matrix.os == 'wsl-ubuntu' && steps.cache-nvm.outputs.cache-hit != 'true'
+        shell: wsl-bash {0}
+        run: tar -czf /mnt/d/a/npm-merge-driver-install/npm-merge-driver-install/nvm-cache.tar.gz -C "$HOME" .nvm
+
+      - name: save nvm cache (wsl)
+        if: matrix.os == 'wsl-ubuntu' && steps.cache-nvm.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: nvm-cache.tar.gz
+          key: wsl-nvm-${{ matrix.node }}-${{ hashFiles('.nvmrc', '.node-version') }}
 
       - name: run npm test
+        if: matrix.os != 'wsl-ubuntu'
         run: npm run test
-        if: ${{ matrix.use-wsl != 'true' }}
-
-      - name: setup wsl
-        uses: Vampire/setup-wsl@v6
-        with:
-          distribution: Ubuntu-22.04
-        if: ${{ matrix.use-wsl == 'true' }}
-
-      - name: cache nvm and node
-        uses: actions/cache@v4
-        with:
-          path: \\wsl$\Ubuntu-22.04\home\runneradmin\.nvm
-          key: wsl-nvm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            wsl-nvm-${{ matrix.node }}-
-            wsl-nvm-
-        if: ${{ matrix.use-wsl == 'true' }}
-
-      - name: determine wsl workspace path
-        id: wsl
-        shell: pwsh
-        run: |
-          $winPath = '${{ github.workspace }}'
-          $posixPath = $winPath -replace '\\', '/'
-          $workspace = wsl wslpath -a $posixPath
-          "workspace=$workspace" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        if: ${{ matrix.use-wsl == 'true' }}
-
-      - name: install Node.js and run tests inside WSL
-        shell: pwsh
-        run: |
-          $nodeVersion = '${{ matrix.node }}'
-          $wslWorkspace = '${{ steps.wsl.outputs.workspace }}'
-          $bashScript = @'
-          set -eo pipefail
-          NODE_VERSION="__NODE_VERSION__"
-          WSL_WORKSPACE="__WSL_WORKSPACE__"
-          echo "=== Setting up NVM ==="
-          export NVM_DIR="$HOME/.nvm"
-          if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-            echo "Installing nvm..."
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-            export NVM_DIR="$HOME/.nvm"
-          fi
-          echo "Sourcing nvm.sh..."
-          if [ -s "$NVM_DIR/nvm.sh" ]; then
-            \. "$NVM_DIR/nvm.sh" --no-use || { echo "Failed to source nvm.sh"; exit 1; }
-          else
-            echo "ERROR: nvm.sh not found at $NVM_DIR/nvm.sh"
-            exit 1
-          fi
-          echo "=== Installing Node.js $NODE_VERSION ==="
-          nvm install "$NODE_VERSION" || { echo "nvm install failed"; exit 1; }
-          echo "=== Using Node.js $NODE_VERSION ==="
-          nvm use "$NODE_VERSION" || { echo "nvm use failed"; exit 1; }
-          echo "Node version: $(node --version)"
-          echo "NPM version: $(npm --version)"
-          echo "Current PATH: $PATH"
-          echo "=== Changing to workspace: $WSL_WORKSPACE ==="
-          cd "$WSL_WORKSPACE"
-          echo "=== Running npm install ==="
-          npm install --prefer-offline --no-audit
-          echo "=== Running tests ==="
-          npm test
-          '@
-          $bashScript = $bashScript.Replace("__NODE_VERSION__", $nodeVersion).Replace("__WSL_WORKSPACE__", $wslWorkspace)
-          $normalizedScript = $bashScript -replace "`r`n", "`n"
-          $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalizedScript)
-          $encoded = [System.Convert]::ToBase64String($bytes)
-          $wslCommand = "printf '%s' '$encoded' | base64 -d > /tmp/wsl-ci.sh && bash /tmp/wsl-ci.sh"
-          wsl bash -lc "$wslCommand"
-        if: ${{ matrix.use-wsl == 'true' }}

@@ -1,83 +1,112 @@
-const path = require('path');
-const spawnPromise = require('@brandonocasey/spawn-promise');
-const uuid = require('uuid');
-const fs = require('fs');
-const installLocalBin = require.resolve('install-local/bin/install-local');
-const isInstalled = require('../src/is-installed.js');
-const os = require('os');
+import { spawn } from 'node:child_process';
+import fs from 'node:fs';
+import { createRequire } from 'node:module';
+import os from 'node:os';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import { v4 as uuidv4 } from 'uuid';
 
-const BASE_DIR = path.resolve(__dirname, '..');
+const require = createRequire(import.meta.url);
+const installLocalBin = require.resolve('install-local/bin/install-local');
+
+const BASE_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEMP_DIR = os.tmpdir();
 
-const getTempDir = function() {
-  return path.join(TEMP_DIR, uuid.v4());
-};
+const getTempDir = () => path.join(TEMP_DIR, uuidv4());
 
-const promiseSpawn = function(bin, args, options = {}) {
+const promiseSpawn = (bin, args, options = {}) => {
   const ignoreExitCode = options.ignoreExitCode;
 
   delete options.ignoreExitCode;
-  options = Object.assign({shell: true, stdio: 'pipe', encoding: 'utf8'}, options);
+  options = { stdio: 'pipe', encoding: 'utf8', ...options };
+
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  return spawnPromise(bin, args, options).then(function({status, stderr, stdout, combined}) {
-    if (!ignoreExitCode && status !== 0) {
-      return Promise.reject(`command ${bin} ${args.join(' ')} failed with code ${status}\n` + combined);
-    }
-    return Promise.resolve({exitCode: status, stderr, stdout});
+  // Windows needs shell: true to run .cmd files
+  if (os.platform() === 'win32') {
+    options.shell = true;
+  }
 
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args, options);
+    let stdout = '';
+    let stderr = '';
+
+    if (child.stdout) {
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+    }
+
+    if (child.stderr) {
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+    }
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (exitCode) => {
+      if (!ignoreExitCode && exitCode !== 0) {
+        reject(new Error(`command ${bin} ${args.join(' ')} failed with code ${exitCode}\n${stdout}${stderr}`));
+      } else {
+        resolve({
+          exitCode,
+          stderr,
+          stdout,
+        });
+      }
+    });
   });
 };
 
 const sharedHooks = {
+  before: (context) => {
+    context.template = getTempDir();
 
-  before: (t) => {
-    t.context = {
-      template: getTempDir()
-    };
-
-    fs.mkdirSync(t.context.template, {recursive: true});
-    fs.writeFileSync(path.join(t.context.template, '.gitignore'), 'node_modules\n');
+    fs.mkdirSync(context.template, { recursive: true });
+    fs.writeFileSync(path.join(context.template, '.gitignore'), 'node_modules\n');
 
     // create the package.json
-    return promiseSpawn('npm', ['init', '-y'], {cwd: t.context.template}).then(function(result) {
-      // create the .git dir
-      return promiseSpawn('git', ['init'], {cwd: t.context.template});
-    }).then(function(result) {
-      return promiseSpawn('npm', ['install', '--package-lock-only']);
-    }).then(function(result) {
-      return promiseSpawn('git', ['add', '--all'], {cwd: t.context.template});
-    }).then(function(result) {
-      return promiseSpawn('git', ['config', '--local', 'user.email', '"you@example.com"'], {cwd: t.context.template});
-    }).then(function(result) {
-      return promiseSpawn('git', ['config', '--local', 'user.name', '"Your Name"'], {cwd: t.context.template});
-    }).then(function(result) {
-      return promiseSpawn('git', ['commit', '-a', '-m', '"initial"'], {cwd: t.context.template});
-    });
+    return promiseSpawn('npm', ['init', '-y'], { cwd: context.template })
+      .then((_result) => {
+        // create the .git dir
+        return promiseSpawn('git', ['init'], { cwd: context.template });
+      })
+      .then((_result) => promiseSpawn('npm', ['install', '--package-lock-only'], { cwd: context.template }))
+      .then((_result) => promiseSpawn('git', ['add', '--all'], { cwd: context.template }))
+      .then((_result) =>
+        promiseSpawn('git', ['config', '--local', 'user.email', '"you@example.com"'], { cwd: context.template }),
+      )
+      .then((_result) =>
+        promiseSpawn('git', ['config', '--local', 'user.name', '"Your Name"'], { cwd: context.template }),
+      )
+      .then((_result) => promiseSpawn('git', ['commit', '-a', '-m', '"initial"'], { cwd: context.template }));
   },
-  beforeEach: (t) => {
-    t.context.old = {
-      PATH: process.env.PATH
+  beforeEach: (context) => {
+    context.old = {
+      PATH: process.env.PATH,
     };
-    t.context.logs = [];
-    t.context.fakeLogger = {
+    context.logs = [];
+    context.fakeLogger = {
       log: (...args) => {
-        t.context.logs.push.apply(t.context.logs, args);
-      }
+        context.logs.push.apply(context.logs, args);
+      },
     };
 
-    t.context.dir = getTempDir();
-    fs.cpSync(t.context.template, t.context.dir, {recursive: true});
+    context.dir = getTempDir();
+    fs.cpSync(context.template, context.dir, { recursive: true });
 
-    t.context.installPackage = function(env = {}) {
-      return promiseSpawn('node', [installLocalBin, BASE_DIR], {cwd: t.context.dir, env});
-    };
+    context.installPackage = (env = {}) => promiseSpawn('node', [installLocalBin, BASE_DIR], { cwd: context.dir, env });
 
-    t.context.fakegit = function() {
+    context.fakegit = () => {
       // put the tempdir path as highest priorty in PATH
       let separator = ':';
-      let gitDest = path.join(t.context.dir, 'git');
+      let gitDest = path.join(context.dir, 'git');
 
       if (os.platform() === 'win32') {
         separator = ';';
@@ -86,29 +115,23 @@ const sharedHooks = {
 
       // move a fake git binary into the temp context dir
       // this will cause git to fail to run
-      fs.copyFileSync(path.join(__dirname, 'fakegit.js'), gitDest);
+      fs.copyFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fakegit.js'), gitDest);
 
-      return Object.assign({}, process.env, {
-        PATH: `${t.context.dir}${separator}${process.env.PATH}`
-      });
+      // Make the file executable
+      fs.chmodSync(gitDest, 0o755);
+
+      return { ...process.env, PATH: `${context.dir}${separator}${process.env.PATH}` };
     };
-
   },
 
-  afterEach: (t) => {
-    fs.rmSync(t.context.dir, {recursive: true, force: true});
-    process.env.PATH = t.context.old.PATH;
+  afterEach: (context) => {
+    fs.rmSync(context.dir, { recursive: true, force: true });
+    process.env.PATH = context.old.PATH;
   },
 
-  after: (t) => {
-    fs.rmSync(t.context.template, {recursive: true, force: true});
-  }
+  after: (context) => {
+    fs.rmSync(context.template, { recursive: true, force: true });
+  },
 };
 
-module.exports = {
-  BASE_DIR,
-  promiseSpawn,
-  isInstalled,
-  getTempDir,
-  sharedHooks
-};
+export { BASE_DIR, promiseSpawn, sharedHooks };

@@ -1,3 +1,3 @@
-const noop = function() {};
+const noop = () => {};
 
-module.exports = noop;
+export default noop;
