@@ -20,7 +20,7 @@ const install = (cwd, options) => {
     return 1;
   }
 
-  uninstall(cwd, { logger: { log: noop } });
+  uninstall(cwd, { logger: { log: noop }, env, getGitDir: getGitDir_ });
 
   const mergePath = fileURLToPath(new URL('./merge.js', import.meta.url));
   const infoDir = path.join(gitDir, 'info');

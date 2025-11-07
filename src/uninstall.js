@@ -13,7 +13,8 @@ const RE2 = /.* merge\s*=\s*npm-merge-driver$/;
 const uninstall = (cwd, options) => {
   const logger = options?.logger || { log };
   const env = options?.env || process.env;
-  const gitDir = getGitDir(cwd, options);
+  const getGitDir_ = options?.getGitDir || getGitDir;
+  const gitDir = getGitDir_(cwd, options);
 
   // we dont check isInstalled here as isInstalled returns true
   // for full installs only
