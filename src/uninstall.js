@@ -4,7 +4,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import getGitDir from './get-git-dir.js';
+import { getGitDir } from './get-git-dir.js';
+import getRoot from './get-root.js';
 import { log } from './logger.js';
 
 const RE = /.* merge\s*=\s*npm-merge-driver-install$/;
@@ -13,34 +14,42 @@ const RE2 = /.* merge\s*=\s*npm-merge-driver$/;
 const uninstall = (cwd, options) => {
   const logger = options?.logger || { log };
   const env = options?.env || process.env;
+  const getRoot_ = options?.getRoot || getRoot;
   const getGitDir_ = options?.getGitDir || getGitDir;
-  const gitDir = getGitDir_(cwd, options);
+  const rootDir = getRoot_(cwd, options);
 
   // we dont check isInstalled here as isInstalled returns true
   // for full installs only
-  if (gitDir) {
+  if (rootDir) {
     // remove git config settings
-    spawnSync('git', ['config', '--local', '--remove-section', 'merge.npm-merge-driver-install'], { cwd, env });
+    spawnSync('git', ['config', '--local', '--remove-section', 'merge.npm-merge-driver-install'], {
+      cwd: rootDir,
+      env,
+    });
 
-    spawnSync('git', ['config', '--local', '--remove-section', 'merge.npm-merge-driver'], { cwd, env });
+    spawnSync('git', ['config', '--local', '--remove-section', 'merge.npm-merge-driver'], { cwd: rootDir, env });
 
-    const attrFile = path.join(gitDir, 'info', 'attributes');
+    const gitDir = getGitDir_(rootDir, options);
 
-    // remove git attributes
-    if (fs.existsSync(attrFile)) {
-      let attrContents = '';
+    if (gitDir) {
+      const attrFile = path.join(gitDir, 'info', 'attributes');
 
-      try {
-        attrContents = fs
-          .readFileSync(attrFile, 'utf8')
-          .split(/\r?\n/)
-          .filter((line) => !(line.match(RE) || line.match(RE2)))
-          .join('\n');
-      } catch (_e) {
-        // some issue we cannot handle
+      // remove git attributes
+      if (fs.existsSync(attrFile)) {
+        let attrContents = '';
+
+        try {
+          attrContents = fs
+            .readFileSync(attrFile, 'utf8')
+            .split(/\r?\n/)
+            .filter((line) => !(line.match(RE) || line.match(RE2)))
+            .join('\n');
+        } catch (_e) {
+          // some issue we cannot handle
+        }
+
+        fs.writeFileSync(attrFile, attrContents);
       }
-
-      fs.writeFileSync(attrFile, attrContents);
     }
   }
 

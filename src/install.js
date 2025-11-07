@@ -4,50 +4,29 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import getGitDir from './get-git-dir.js';
+import { getGitDir } from './get-git-dir.js';
+import getRoot from './get-root.js';
 import { log } from './logger.js';
 import noop from './noop.js';
+import { getAllLockfilePatterns } from './package-managers.js';
 import uninstall from './uninstall.js';
 
-const install = (cwd, options) => {
-  const logger = options?.logger || { log };
-  const env = options?.env || process.env;
-  const getGitDir_ = options?.getGitDir || getGitDir;
-  const gitDir = getGitDir_(cwd, options);
-
-  if (!gitDir) {
-    logger.log('Current working directory is not using git or git is not installed, skipping install.');
-    return 1;
-  }
-
-  uninstall(cwd, { logger: { log: noop }, env, getGitDir: getGitDir_ });
-
-  const mergePath = fileURLToPath(new URL('./merge.js', import.meta.url));
-  const infoDir = path.join(gitDir, 'info');
-
-  if (!fs.existsSync(infoDir)) {
-    fs.mkdirSync(infoDir);
-  }
-
-  // add to git config
+const configureGitMergeDriver = (rootDir, mergePath, env) => {
   const configOne = spawnSync(
     'git',
-    ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge npm lockfiles'],
-    { cwd, env },
+    ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge package manager lockfiles'],
+    { cwd: rootDir, env },
   );
   const configTwo = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.driver', `node '${mergePath}' %A %O %B %P`],
-    { cwd, env },
+    { cwd: rootDir, env },
   );
 
-  if (configOne.status !== 0 || configTwo.status !== 0) {
-    logger.log('Failed to configure npm-merge-driver-install in git directory');
-    return 1;
-  }
+  return configOne.status === 0 && configTwo.status === 0;
+};
 
-  // add to attributes file
-  const attrFile = path.join(infoDir, 'attributes');
+const updateGitAttributes = (attrFile, lockfilePatterns) => {
   let attrContents = '';
 
   if (fs.existsSync(attrFile)) {
@@ -57,10 +36,53 @@ const install = (cwd, options) => {
   if (attrContents && !attrContents.match(/[\n\r]$/g)) {
     attrContents += '\n';
   }
-  attrContents += 'npm-shrinkwrap.json merge=npm-merge-driver-install\n';
-  attrContents += 'package-lock.json merge=npm-merge-driver-install\n';
+
+  for (const pattern of lockfilePatterns) {
+    attrContents += `${pattern} merge=npm-merge-driver-install\n`;
+  }
 
   fs.writeFileSync(attrFile, attrContents);
+};
+
+const install = (cwd, options) => {
+  const logger = options?.logger || { log };
+  const env = options?.env || process.env;
+  const getRoot_ = options?.getRoot || getRoot;
+  const getGitDir_ = options?.getGitDir || getGitDir;
+  const rootDir = getRoot_(cwd, options);
+
+  if (!rootDir) {
+    logger.log('Current working directory is not using git or git is not installed, skipping install.');
+    return 1;
+  }
+
+  uninstall(rootDir, { logger: { log: noop }, env, getGitDir: getGitDir_ });
+
+  const mergePath = path.relative(rootDir, fileURLToPath(new URL('./merge.js', import.meta.url)));
+  const gitDir = getGitDir_(rootDir, options);
+
+  if (!gitDir) {
+    logger.log('Failed to get git directory');
+    return 1;
+  }
+
+  const infoDir = path.join(gitDir, 'info');
+
+  if (!fs.existsSync(infoDir)) {
+    fs.mkdirSync(infoDir, { recursive: true });
+  }
+
+  // add to git config
+  if (!configureGitMergeDriver(rootDir, mergePath, env)) {
+    logger.log('Failed to configure npm-merge-driver-install in git directory');
+    return 1;
+  }
+
+  // add to attributes file
+  const attrFile = path.join(infoDir, 'attributes');
+  const lockfilePatterns = getAllLockfilePatterns();
+
+  updateGitAttributes(attrFile, lockfilePatterns);
 
   logger.log('installed successfully');
 

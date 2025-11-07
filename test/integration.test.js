@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { getGitDir } from '../src/get-git-dir.js';
 import { promiseSpawn, sharedHooks } from './helpers.js';
 
 describe('integration', () => {
@@ -47,5 +50,118 @@ describe('integration', () => {
     // everything was merged!
     expect(lsResult.stdout).toBeFalsy();
     expect(lsResult.stderr).toBeFalsy();
+  });
+
+  test('installs git attributes for all package managers', () => {
+    const gitDir = getGitDir(context.dir);
+    const attrFile = path.join(gitDir, 'info', 'attributes');
+
+    expect(fs.existsSync(attrFile)).toBe(true);
+
+    const content = fs.readFileSync(attrFile, 'utf8');
+
+    expect(content).toMatch(/package-lock\.json merge=npm-merge-driver-install/);
+    expect(content).toMatch(/npm-shrinkwrap\.json merge=npm-merge-driver-install/);
+    expect(content).toMatch(/pnpm-lock\.yaml merge=npm-merge-driver-install/);
+    expect(content).toMatch(/yarn\.lock merge=npm-merge-driver-install/);
+    expect(content).toMatch(/bun\.lock merge=npm-merge-driver-install/);
+    expect(content).toMatch(/bun\.lockb merge=npm-merge-driver-install/);
+    expect(content).toMatch(/deno\.lock merge=npm-merge-driver-install/);
+  });
+
+  test('configures git merge driver', async () => {
+    const result = await promiseSpawn('git', ['config', '--local', '--get', 'merge.npm-merge-driver-install.driver'], {
+      cwd: context.dir,
+    });
+
+    expect(result.stdout).toMatch(/node.*merge\.js/);
+  });
+
+  test('can merge pnpm-lock.yaml changes', async () => {
+    try {
+      await promiseSpawn('pnpm', ['--version'], { cwd: context.dir });
+    } catch (_error) {
+      console.warn('pnpm binary not available; skipping pnpm integration test');
+      return;
+    }
+
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    delete packageJson.dependencies;
+    packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    await promiseSpawn('pnpm', ['install', '--no-frozen-lockfile'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to pnpm'], { cwd: context.dir });
+
+    const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+
+    const mainBranch = result.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'pnpm-test'], { cwd: context.dir });
+
+    await promiseSpawn('pnpm', ['add', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to devDeps'], { cwd: context.dir });
+
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    await promiseSpawn('pnpm', ['add', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to deps'], { cwd: context.dir });
+
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'pnpm-test'], { cwd: context.dir });
+
+    expect(mergeResult.stdout).toMatch(/pnpm-lock\.yaml merged successfully/);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
+
+    expect(lsResult.stdout.toString().trim()).toBe('');
+  });
+
+  test('can merge yarn.lock changes', async () => {
+    try {
+      await promiseSpawn('yarn', ['--version'], { cwd: context.dir });
+    } catch (_error) {
+      console.warn('yarn binary not available; skipping yarn integration test');
+      return;
+    }
+
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    delete packageJson.dependencies;
+    packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    await promiseSpawn('yarn', ['install'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to yarn'], { cwd: context.dir });
+
+    const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+
+    const mainBranch = result.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'yarn-test'], { cwd: context.dir });
+
+    await promiseSpawn('yarn', ['add', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to devDeps'], { cwd: context.dir });
+
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    await promiseSpawn('yarn', ['add', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to deps'], { cwd: context.dir });
+
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'yarn-test'], { cwd: context.dir });
+
+    expect(mergeResult.stdout).toMatch(/yarn\.lock merged successfully/);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
+
+    expect(lsResult.stdout.toString().trim()).toBe('');
   });
 });
