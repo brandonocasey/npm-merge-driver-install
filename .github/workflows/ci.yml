@@ -70,17 +70,60 @@ jobs:
             wsl-nvm-
         if: ${{ matrix.use-wsl == 'true' }}
 
+      - name: restore npm cache
+        uses: actions/cache/restore@v4
+        id: cache-npm
+        with:
+          path: ${{ runner.temp }}\wsl-npm-cache
+          key: wsl-npm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            wsl-npm-${{ matrix.node }}-
+            wsl-npm-
+        if: ${{ matrix.use-wsl == 'true' }}
+
       - name: copy nvm cache to WSL
         shell: pwsh
         run: |
           $cachePath = Join-Path '${{ runner.temp }}' 'wsl-nvm-cache'
+          Write-Host "=== NVM Cache Restore Debug ==="
+          Write-Host "Cache path: $cachePath"
+          Write-Host "Cache exists: $(Test-Path $cachePath)"
           if (Test-Path $cachePath) {
-            Write-Host "Restoring NVM cache from Windows temp to WSL..."
-            wsl bash -c "mkdir -p ~/.nvm && cp -r /mnt/c/Users/runneradmin/AppData/Local/Temp/wsl-nvm-cache/* ~/.nvm/ 2>/dev/null || true"
+            Write-Host "Cache directory contents:"
+            Get-ChildItem $cachePath | ForEach-Object { Write-Host "  $($_.Name)" }
+            Write-Host "Total items in cache: $((Get-ChildItem $cachePath -Recurse).Count)"
+            $posixPath = $cachePath -replace '\\', '/'
+            $wslPath = wsl wslpath -a $posixPath
+            Write-Host "WSL path: $wslPath"
+            Write-Host "Restoring cache to WSL ~/.nvm..."
+            wsl bash -c "mkdir -p ~/.nvm && echo 'Contents of cache directory:' && ls -la '$wslPath' && echo 'Copying...' && cp -a '$wslPath'/. ~/.nvm/ && echo 'Contents of ~/.nvm after restore:' && ls -la ~/.nvm && echo 'Checking for nvm.sh:' && ls -la ~/.nvm/nvm.sh 2>/dev/null || echo 'nvm.sh not found'"
+            Write-Host "=== Cache Restore Complete ==="
           } else {
-            Write-Host "No cache to restore"
+            Write-Host "No cache to restore - cache path does not exist"
           }
-        if: ${{ matrix.use-wsl == 'true' && steps.cache-nvm.outputs.cache-hit == 'true' }}
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: copy npm cache to WSL
+        shell: pwsh
+        run: |
+          $cachePath = Join-Path '${{ runner.temp }}' 'wsl-npm-cache'
+          Write-Host "=== NPM Cache Restore Debug ==="
+          Write-Host "Cache path: $cachePath"
+          Write-Host "Cache exists: $(Test-Path $cachePath)"
+          if (Test-Path $cachePath) {
+            Write-Host "Cache directory contents:"
+            Get-ChildItem $cachePath | ForEach-Object { Write-Host "  $($_.Name)" }
+            Write-Host "Total items in cache: $((Get-ChildItem $cachePath -Recurse).Count)"
+            $posixPath = $cachePath -replace '\\', '/'
+            $wslPath = wsl wslpath -a $posixPath
+            Write-Host "WSL path: $wslPath"
+            Write-Host "Restoring cache to WSL ~/.npm..."
+            wsl bash -c "mkdir -p ~/.npm && echo 'Contents of cache directory:' && ls -la '$wslPath' && echo 'Copying...' && cp -a '$wslPath'/. ~/.npm/ && echo 'Contents of ~/.npm after restore:' && ls -la ~/.npm"
+            Write-Host "=== NPM Cache Restore Complete ==="
+          } else {
+            Write-Host "No npm cache to restore - cache path does not exist"
+          }
+        if: ${{ matrix.use-wsl == 'true' }}
 
       - name: determine wsl workspace path
         id: wsl
@@ -98,11 +141,20 @@ jobs:
           $bashScript = @'
           set -eo pipefail
           export NVM_DIR="$HOME/.nvm"
+          echo "=== NVM Setup Debug ==="
+          echo "NVM_DIR: $NVM_DIR"
+          echo "Checking for nvm.sh..."
+          ls -la "$NVM_DIR/nvm.sh" 2>/dev/null || echo "nvm.sh not found"
+          echo "Contents of ~/.nvm:"
+          ls -la "$NVM_DIR" 2>/dev/null || echo "~/.nvm directory not found"
           if [ ! -s "$NVM_DIR/nvm.sh" ]; then
-            echo "Installing nvm..."
+            echo "nvm.sh not found or empty, installing nvm..."
             curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            echo "nvm installation completed"
+          else
+            echo "nvm already installed (nvm.sh exists), skipping installation"
           fi
-          echo "nvm installed successfully"
+          echo "=== NVM Setup Complete ==="
           '@
           $normalizedScript = $bashScript -replace "`r`n", "`n"
           $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalizedScript)
@@ -119,11 +171,28 @@ jobs:
           set -eo pipefail
           NODE_VERSION="__NODE_VERSION__"
           export NVM_DIR="$HOME/.nvm"
+          echo "=== Node.js Install Debug ==="
+          echo "Node version to install: $NODE_VERSION"
+          echo "Sourcing nvm.sh..."
           \. "$NVM_DIR/nvm.sh" --no-use || { echo "Failed to source nvm.sh"; exit 1; }
-          nvm install "$NODE_VERSION" || { echo "nvm install failed"; exit 1; }
+
+          echo "Checking for existing Node.js installations..."
+          echo "Contents of $NVM_DIR/versions/node:"
+          ls -la "$NVM_DIR/versions/node" 2>/dev/null || echo "No node versions found"
+
+          # Check if the specific Node version is already installed
+          if nvm ls "$NODE_VERSION" >/dev/null 2>&1 && [ -d "$NVM_DIR/versions/node/v$NODE_VERSION"* ]; then
+            echo "Node.js $NODE_VERSION already installed (found in cache), skipping download"
+          else
+            echo "Node.js $NODE_VERSION not found, installing..."
+            nvm install "$NODE_VERSION" || { echo "nvm install failed"; exit 1; }
+            echo "Node.js $NODE_VERSION installation completed"
+          fi
+
           nvm use "$NODE_VERSION" || { echo "nvm use failed"; exit 1; }
-          echo "Node version: $(node --version)"
-          echo "NPM version: $(npm --version)"
+          echo "Active Node version: $(node --version)"
+          echo "Active NPM version: $(npm --version)"
+          echo "=== Node.js Install Complete ==="
           '@
           $bashScript = $bashScript.Replace("__NODE_VERSION__", $nodeVersion)
           $normalizedScript = $bashScript -replace "`r`n", "`n"
@@ -179,10 +248,29 @@ jobs:
         shell: pwsh
         run: |
           $cachePath = Join-Path '${{ runner.temp }}' 'wsl-nvm-cache'
-          Write-Host "Copying NVM cache from WSL to Windows temp..."
+          Write-Host "=== Copying NVM cache from WSL ==="
+          Write-Host "Cache path: $cachePath"
           New-Item -ItemType Directory -Force -Path $cachePath | Out-Null
-          wsl bash -c "cp -r ~/.nvm/* /mnt/c/Users/runneradmin/AppData/Local/Temp/wsl-nvm-cache/ 2>/dev/null || true"
+          $posixPath = $cachePath -replace '\\', '/'
+          $wslPath = wsl wslpath -a $posixPath
+          Write-Host "WSL path: $wslPath"
+          wsl bash -c "echo 'Contents of ~/.nvm:' && ls -la ~/.nvm/ && echo 'Copying to cache...' && cp -a ~/.nvm/. '$wslPath'/ && echo 'Cache contents after copy:' && ls -la '$wslPath/'"
+          Write-Host "NVM cache copied from WSL"
         if: ${{ matrix.use-wsl == 'true' && steps.cache-nvm.outputs.cache-hit != 'true' }}
+
+      - name: copy npm cache from WSL
+        shell: pwsh
+        run: |
+          $cachePath = Join-Path '${{ runner.temp }}' 'wsl-npm-cache'
+          Write-Host "=== Copying NPM cache from WSL ==="
+          Write-Host "Cache path: $cachePath"
+          New-Item -ItemType Directory -Force -Path $cachePath | Out-Null
+          $posixPath = $cachePath -replace '\\', '/'
+          $wslPath = wsl wslpath -a $posixPath
+          Write-Host "WSL path: $wslPath"
+          wsl bash -c "echo 'Contents of ~/.npm:' && du -sh ~/.npm 2>/dev/null || echo 'No npm cache' && ls -la ~/.npm/ | head -20 && echo 'Copying to cache...' && cp -a ~/.npm/. '$wslPath'/ && echo 'Cache size:' && du -sh '$wslPath'"
+          Write-Host "NPM cache copied from WSL"
+        if: ${{ matrix.use-wsl == 'true' && steps.cache-npm.outputs.cache-hit != 'true' }}
 
       - name: save nvm cache
         uses: actions/cache/save@v4
@@ -190,3 +278,10 @@ jobs:
           path: ${{ runner.temp }}\wsl-nvm-cache
           key: wsl-nvm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
         if: ${{ matrix.use-wsl == 'true' && steps.cache-nvm.outputs.cache-hit != 'true' }}
+
+      - name: save npm cache
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}\wsl-npm-cache
+          key: wsl-npm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+        if: ${{ matrix.use-wsl == 'true' && steps.cache-npm.outputs.cache-hit != 'true' }}

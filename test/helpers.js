@@ -6,7 +6,6 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { v4 as uuidv4 } from 'uuid';
-import isInstalled from '../src/is-installed.js';
 
 const require = createRequire(import.meta.url);
 const installLocalBin = require.resolve('install-local/bin/install-local');
@@ -135,4 +134,4 @@ const sharedHooks = {
   },
 };
 
-export { BASE_DIR, promiseSpawn, isInstalled, getTempDir, sharedHooks };
+export { BASE_DIR, promiseSpawn, sharedHooks };
