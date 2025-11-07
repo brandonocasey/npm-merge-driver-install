@@ -1,56 +1,51 @@
-const test = require('ava');
-const {
-  promiseSpawn,
-  sharedHooks
-} = require('./helpers.js');
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import { promiseSpawn, sharedHooks } from './helpers.js';
 
-test.before(sharedHooks.before);
-test.beforeEach((t) => {
-  sharedHooks.beforeEach(t);
+describe('integration', () => {
+  const context = {};
 
-  return t.context.installPackage().then(function() {
-    return promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'not-prerelease'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['add', '--all'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['commit', '-a', '-m', '"add not-prerelease to dev deps"'], {cwd: t.context.dir});
+  beforeAll(async () => {
+    await sharedHooks.before(context);
   });
-});
-test.afterEach.always(sharedHooks.afterEach);
-test.after.always(sharedHooks.after);
 
-test('can merge package-lock only changes', (t) => {
-  let mainBranch;
+  beforeEach(async () => {
+    sharedHooks.beforeEach(context);
 
-  return promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {cwd: t.context.dir}).then(function(result) {
-    mainBranch = result.stdout.toString().trim();
+    await context.installPackage();
+    await promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], { cwd: context.dir });
+    await promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'not-prerelease'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-a', '-m', '"add not-prerelease to dev deps"'], { cwd: context.dir });
+  });
 
-    return promiseSpawn('git', ['checkout', '-b', 'merge-driver-test'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'express'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['add', '--all'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['commit', '-a', '-m', '"add express to dev deps"'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['checkout', mainBranch], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('npm', ['i', '--package-lock-only', 'express'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['add', '--all'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['commit', '-a', '-m', '"add express as dep"'], {cwd: t.context.dir});
-  }).then(function(result) {
-    return promiseSpawn('git', ['merge', '--no-edit', 'merge-driver-test'], {cwd: t.context.dir});
-  }).then(function(result) {
-    t.regex(result.stdout, /npm-merge-driver-install: package-lock.json merged successfully/, 'merge happened');
-    return promiseSpawn('git', ['ls-files', '-u'], {cwd: t.context.dir});
-  }).then(function(result) {
+  afterEach(() => {
+    sharedHooks.afterEach(context);
+  });
+
+  afterAll(() => {
+    sharedHooks.after(context);
+  });
+
+  test('can merge package-lock only changes', async () => {
+    const branchResult = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+    const mainBranch = branchResult.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'merge-driver-test'], { cwd: context.dir });
+    await promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-a', '-m', '"add express to dev deps"'], { cwd: context.dir });
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+    await promiseSpawn('npm', ['i', '--package-lock-only', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-a', '-m', '"add express as dep"'], { cwd: context.dir });
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'merge-driver-test'], { cwd: context.dir });
+
+    expect(mergeResult.stdout).toMatch(/npm-merge-driver-install: package-lock.json merged successfully/);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
     // if we get nothing back from ls-files
     // everything was merged!
-    t.falsy(t.stdout);
-    t.falsy(t.stderr);
+    expect(lsResult.stdout).toBeFalsy();
+    expect(lsResult.stderr).toBeFalsy();
   });
 });

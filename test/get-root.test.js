@@ -1,66 +1,76 @@
-const test = require('ava');
-const path = require('path');
-const fs = require('fs');
-const getGitDir = require('../src/get-git-dir.js');
-const {sharedHooks} = require('./helpers.js');
+import fs from 'node:fs';
+import path from 'node:path';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
+import getGitDir from '../src/get-git-dir.js';
+import { sharedHooks } from './helpers.js';
 
-test.before((t) => {
-  return sharedHooks.before(t).then(function() {
-    fs.mkdirSync(path.join(t.context.template, 'subdir'), {recursive: true});
+describe('get-git-dir', () => {
+  const context = {};
 
-  });
-});
-test.beforeEach(sharedHooks.beforeEach);
-test.afterEach.always(sharedHooks.afterEach);
-test.after.always(sharedHooks.after);
-
-test('can find git dir when it exists', (t) => {
-  const result = getGitDir(t.context.dir);
-
-  t.truthy(result, 'is a valid path');
-  t.true(result.endsWith('.git'), 'points to .git directory');
-});
-
-test('can find git dir from sub directory', (t) => {
-  const result = getGitDir(path.join(t.context.dir, 'subdir'));
-
-  t.truthy(result, 'is a valid path');
-  t.true(result.endsWith('.git'), 'points to .git directory');
-});
-
-test('no git dir without .git', (t) => {
-  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
-  const result = getGitDir(t.context.dir);
-
-  t.falsy(result, 'is an empty string');
-});
-
-test('fails due to bad git executable', (t) => {
-  const env = t.context.fakegit();
-  const result = getGitDir(t.context.dir, {env});
-
-  t.falsy(result, 'is an empty string');
-});
-
-test('fails without git executable', (t) => {
-  const result = getGitDir(t.context.dir, {env: {PATH: ''}});
-
-  t.falsy(result, 'is an empty string');
-});
-
-test('can use process.cwd()', (t) => {
-  const result = getGitDir(null, {
-    process: {cwd: () => t.context.dir}
+  beforeAll(async () => {
+    await sharedHooks.before(context);
+    fs.mkdirSync(path.join(context.template, 'subdir'), { recursive: true });
   });
 
-  t.truthy(result, 'is a valid path');
-});
-
-test('can use INIT_CWD', (t) => {
-  const result = getGitDir(null, {
-    env: {INIT_CWD: t.context.dir}
+  beforeEach(() => {
+    sharedHooks.beforeEach(context);
   });
 
-  t.truthy(result, 'is a valid path');
-});
+  afterEach(() => {
+    sharedHooks.afterEach(context);
+  });
 
+  afterAll(() => {
+    sharedHooks.after(context);
+  });
+
+  test('can find git dir when it exists', () => {
+    const result = getGitDir(context.dir);
+
+    expect(result).toBeTruthy();
+    expect(result.endsWith('.git')).toBe(true);
+  });
+
+  test('can find git dir from sub directory', () => {
+    const result = getGitDir(path.join(context.dir, 'subdir'));
+
+    expect(result).toBeTruthy();
+    expect(result.endsWith('.git')).toBe(true);
+  });
+
+  test('no git dir without .git', () => {
+    fs.rmSync(path.join(context.dir, '.git'), { recursive: true, force: true });
+    const result = getGitDir(context.dir);
+
+    expect(result).toBeFalsy();
+  });
+
+  test('fails due to bad git executable', () => {
+    const env = context.fakegit();
+    const result = getGitDir(context.dir, { env });
+
+    expect(result).toBeFalsy();
+  });
+
+  test('fails without git executable', () => {
+    const result = getGitDir(context.dir, { env: { PATH: '' } });
+
+    expect(result).toBeFalsy();
+  });
+
+  test('can use process.cwd()', () => {
+    const result = getGitDir(null, {
+      process: { cwd: () => context.dir },
+    });
+
+    expect(result).toBeTruthy();
+  });
+
+  test('can use INIT_CWD', () => {
+    const result = getGitDir(null, {
+      env: { INIT_CWD: context.dir },
+    });
+
+    expect(result).toBeTruthy();
+  });
+});
