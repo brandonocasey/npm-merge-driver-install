@@ -1,55 +1,125 @@
 name: ci
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
-  should-skip:
-    continue-on-error: true
-    runs-on: ubuntu-latest
-    # Map a step output to a job output
-    outputs:
-      should-skip-job: ${{steps.skip-check.outputs.should_skip}}
-    steps:
-      - id: skip-check
-        uses: fkirc/skip-duplicate-actions@v2.1.0
-        with:
-          github_token: ${{github.token}}
-
   ci:
-    needs: should-skip
-    # Never skip on the  main branch
-    if: ${{needs.should-skip.outputs.should-skip-job != 'true' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/main'}}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node: [20, 21, 22, 23, 24, 25]
+        node: [20, 22, 24]
+        target: [ubuntu, macos, windows, windows-wsl]
+        include:
+          - target: ubuntu
+            os: ubuntu-latest
+            use-wsl: "false"
+          - target: macos
+            os: macos-latest
+            use-wsl: "false"
+          - target: windows
+            os: windows-latest
+            use-wsl: "false"
+          - target: windows-wsl
+            os: windows-latest
+            use-wsl: "true"
     runs-on: ${{matrix.os}}
     steps:
+      - name: checkout code
+        uses: actions/checkout@v4
 
-    - name: checkout code
-      uses: actions/checkout@v2
+      - name: configure git line endings
+        run: git config --global core.autocrlf false
 
-    - name: setup node
-      uses: actions/setup-node@v2
-      with:
-        node-version: '${{matrix.node}}'
-        cache: npm
+      - name: setup node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "${{matrix.node}}"
+          cache: npm
+        if: ${{ matrix.use-wsl != 'true' }}
 
-    # turn off the default setup-node problem watchers...
-    - run: echo "::remove-matcher owner=eslint-compact::"
-    - run: echo "::remove-matcher owner=eslint-stylish::"
-    - run: echo "::remove-matcher owner=tsc::"
+      # turn off the default setup-node problem watchers...
+      - run: echo "::remove-matcher owner=eslint-compact::"
+        if: ${{ matrix.use-wsl != 'true' }}
+      - run: echo "::remove-matcher owner=eslint-stylish::"
+        if: ${{ matrix.use-wsl != 'true' }}
+      - run: echo "::remove-matcher owner=tsc::"
+        if: ${{ matrix.use-wsl != 'true' }}
 
-    - name: npm install
-      run: npm i --prefer-offline --no-audit
+      - name: npm install
+        run: npm i --prefer-offline --no-audit
+        if: ${{ matrix.use-wsl != 'true' }}
 
-    - name: run npm test
-      run: npm run test
+      - name: run npm test
+        run: npm run test
+        if: ${{ matrix.use-wsl != 'true' }}
 
-    - name: coverage
-      uses: codecov/codecov-action@v1
-      with:
-        token: ${{secrets.CODECOV_TOKEN}}
-        files: './coverage/coverage-final.json'
-        fail_ci_if_error: true
+      - name: setup wsl
+        uses: Vampire/setup-wsl@v6
+        with:
+          distribution: Ubuntu-22.04
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: cache nvm and node
+        uses: actions/cache@v4
+        with:
+          path: \\wsl$\Ubuntu-22.04\home\runneradmin\.nvm
+          key: wsl-nvm-${{ matrix.node }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            wsl-nvm-${{ matrix.node }}-
+            wsl-nvm-
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: determine wsl workspace path
+        id: wsl
+        shell: pwsh
+        run: |
+          $winPath = '${{ github.workspace }}'
+          $posixPath = $winPath -replace '\\', '/'
+          $workspace = wsl wslpath -a $posixPath
+          "workspace=$workspace" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+        if: ${{ matrix.use-wsl == 'true' }}
+
+      - name: install Node.js and run tests inside WSL
+        shell: pwsh
+        run: |
+          $nodeVersion = '${{ matrix.node }}'
+          $wslWorkspace = '${{ steps.wsl.outputs.workspace }}'
+          $bashScript = @'
+          set -eo pipefail
+          NODE_VERSION="__NODE_VERSION__"
+          WSL_WORKSPACE="__WSL_WORKSPACE__"
+          echo "=== Setting up NVM ==="
+          export NVM_DIR="$HOME/.nvm"
+          if [ ! -s "$NVM_DIR/nvm.sh" ]; then
+            echo "Installing nvm..."
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+            export NVM_DIR="$HOME/.nvm"
+          fi
+          echo "Sourcing nvm.sh..."
+          if [ -s "$NVM_DIR/nvm.sh" ]; then
+            \. "$NVM_DIR/nvm.sh" --no-use || { echo "Failed to source nvm.sh"; exit 1; }
+          else
+            echo "ERROR: nvm.sh not found at $NVM_DIR/nvm.sh"
+            exit 1
+          fi
+          echo "=== Installing Node.js $NODE_VERSION ==="
+          nvm install "$NODE_VERSION" || { echo "nvm install failed"; exit 1; }
+          echo "=== Using Node.js $NODE_VERSION ==="
+          nvm use "$NODE_VERSION" || { echo "nvm use failed"; exit 1; }
+          echo "Node version: $(node --version)"
+          echo "NPM version: $(npm --version)"
+          echo "Current PATH: $PATH"
+          echo "=== Changing to workspace: $WSL_WORKSPACE ==="
+          cd "$WSL_WORKSPACE"
+          echo "=== Running npm install ==="
+          npm install --prefer-offline --no-audit
+          echo "=== Running tests ==="
+          npm test
+          '@
+          $bashScript = $bashScript.Replace("__NODE_VERSION__", $nodeVersion).Replace("__WSL_WORKSPACE__", $wslWorkspace)
+          $normalizedScript = $bashScript -replace "`r`n", "`n"
+          $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalizedScript)
+          $encoded = [System.Convert]::ToBase64String($bytes)
+          $wslCommand = "printf '%s' '$encoded' | base64 -d > /tmp/wsl-ci.sh && bash /tmp/wsl-ci.sh"
+          wsl bash -lc "$wslCommand"
+        if: ${{ matrix.use-wsl == 'true' }}
