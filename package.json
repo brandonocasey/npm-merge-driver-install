@@ -21,7 +21,7 @@
   "homepage": "https://github.com/brandonocasey/npm-merge-driver-install",
   "keywords": [],
   "engine": {
-    "node": ">=8"
+    "node": ">=20"
   },
   "scripts": {
     "lint": "vjsstandard",
@@ -44,7 +44,6 @@
     "not-prerelease": "^1.0.1",
     "npm-run-all": "4.1.5",
     "nyc": "15.1.0",
-    "shelljs": "^0.8.4",
     "uuid": "^8.3.2",
     "videojs-generator-verify": "~4.0.1",
     "videojs-standard": "^9.0.1"
