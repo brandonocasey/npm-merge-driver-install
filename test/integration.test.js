@@ -164,4 +164,122 @@ describe('integration', () => {
 
     expect(lsResult.stdout.toString().trim()).toBe('');
   });
+
+  test('can merge bun.lockb changes', async () => {
+    try {
+      await promiseSpawn('bun', ['--version'], { cwd: context.dir });
+    } catch (_error) {
+      console.warn('bun binary not available; skipping bun integration test');
+      return;
+    }
+
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    delete packageJson.dependencies;
+    packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    await promiseSpawn('bun', ['install'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to bun'], { cwd: context.dir });
+
+    const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+
+    const mainBranch = result.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'bun-test'], { cwd: context.dir });
+
+    await promiseSpawn('bun', ['add', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to devDeps'], { cwd: context.dir });
+
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    await promiseSpawn('bun', ['add', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to deps'], { cwd: context.dir });
+
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'bun-test'], { cwd: context.dir });
+
+    expect(mergeResult.stdout).toMatch(/bun\.lockb merged successfully/);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
+
+    expect(lsResult.stdout.toString().trim()).toBe('');
+  });
+
+  test('can merge deno.lock changes', async () => {
+    try {
+      await promiseSpawn('deno', ['--version'], { cwd: context.dir });
+    } catch (_error) {
+      console.warn('deno binary not available; skipping deno integration test');
+      return;
+    }
+
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    delete packageJson.dependencies;
+    packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    // Create a simple deno.json config and a main.ts file
+    const denoJsonPath = path.join(context.dir, 'deno.json');
+    const mainTsPath = path.join(context.dir, 'main.ts');
+
+    fs.writeFileSync(
+      denoJsonPath,
+      JSON.stringify(
+        {
+          imports: {
+            'not-prerelease': 'npm:not-prerelease@^1.0.0',
+          },
+        },
+        null,
+        2,
+      ),
+    );
+    fs.writeFileSync(mainTsPath, "import notPrerelease from 'not-prerelease';\nconsole.log(notPrerelease);");
+
+    await promiseSpawn('deno', ['cache', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to deno'], { cwd: context.dir });
+
+    const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+
+    const mainBranch = result.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'deno-test'], { cwd: context.dir });
+
+    // Add express as an import
+    const denoJson = JSON.parse(fs.readFileSync(denoJsonPath, 'utf8'));
+
+    denoJson.imports.express = 'npm:express@^4.18.0';
+    fs.writeFileSync(denoJsonPath, JSON.stringify(denoJson, null, 2));
+
+    await promiseSpawn('deno', ['cache', '--reload', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express'], { cwd: context.dir });
+
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    // Add a different package
+    const denoJsonMain = JSON.parse(fs.readFileSync(denoJsonPath, 'utf8'));
+
+    denoJsonMain.imports['uuid'] = 'npm:uuid@^9.0.0';
+    fs.writeFileSync(denoJsonPath, JSON.stringify(denoJsonMain, null, 2));
+
+    await promiseSpawn('deno', ['cache', '--reload', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add uuid'], { cwd: context.dir });
+
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'deno-test'], { cwd: context.dir });
+
+    expect(mergeResult.stdout).toMatch(/deno\.lock merged successfully/);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
+
+    expect(lsResult.stdout.toString().trim()).toBe('');
+  });
 });
