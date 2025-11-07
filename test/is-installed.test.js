@@ -1,6 +1,5 @@
 const test = require('ava');
 const path = require('path');
-const shell = require('shelljs');
 const fs = require('fs');
 const os = require('os');
 const install = require('../src/install.js');
@@ -39,7 +38,7 @@ test('not installed after uninstall', (t) => {
 });
 
 test('not installed without .git', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git'));
+  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
 
   t.false(isInstalled(t.context.dir));
 });
@@ -58,19 +57,19 @@ test('not installed without git binary', (t) => {
 
 test('still installed with out .git/config but with attributes', (t) => {
   t.context.install();
-  shell.rm('-f', path.join(t.context.dir, '.git', 'config'));
+  fs.rmSync(path.join(t.context.dir, '.git', 'config'), {force: true});
   t.true(isInstalled(t.context.dir));
 });
 
 test('still installed with out .git/info buh with config', (t) => {
   t.context.install();
-  shell.rm('-rf', path.join(t.context.dir, '.git', 'info'));
+  fs.rmSync(path.join(t.context.dir, '.git', 'info'), {recursive: true, force: true});
   t.true(isInstalled(t.context.dir));
 });
 
 test('still installed with out .git/info/attributes but with config', (t) => {
   t.context.install();
-  shell.rm('-f', path.join(t.context.dir, '.git', 'info', 'attributes'));
+  fs.rmSync(path.join(t.context.dir, '.git', 'info', 'attributes'), {force: true});
   t.true(isInstalled(t.context.dir));
 });
 

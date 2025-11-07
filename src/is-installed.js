@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 const getRoot = require('./get-root.js');
 const path = require('path');
-const shell = require('shelljs');
+const fs = require('fs');
 
 const inConfig = function(cwd) {
   const gitConfigPath = path.join(cwd, '.git', 'config');
 
-  if (!shell.test('-f', gitConfigPath)) {
+  if (!fs.existsSync(gitConfigPath)) {
     return false;
   }
 
-  const config = shell.cat(gitConfigPath);
+  const config = fs.readFileSync(gitConfigPath, 'utf8');
 
   return (/npm-merge-driver-install/i).test(config);
 };
@@ -18,11 +18,11 @@ const inConfig = function(cwd) {
 const inAttr = function(cwd) {
   const gitAttrPath = path.join(cwd, '.git', 'info', 'attributes');
 
-  if (!shell.test('-f', gitAttrPath)) {
+  if (!fs.existsSync(gitAttrPath)) {
     return false;
   }
 
-  const attr = shell.cat(gitAttrPath);
+  const attr = fs.readFileSync(gitAttrPath, 'utf8');
 
   return (/npm-merge-driver-install/i).test(attr);
 };

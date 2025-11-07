@@ -1,6 +1,5 @@
 const path = require('path');
 const spawnPromise = require('@brandonocasey/spawn-promise');
-const shell = require('shelljs');
 const uuid = require('uuid');
 const fs = require('fs');
 const installLocalBin = require.resolve('install-local/bin/install-local');
@@ -8,7 +7,7 @@ const isInstalled = require('../src/is-installed.js');
 const os = require('os');
 
 const BASE_DIR = path.resolve(__dirname, '..');
-const TEMP_DIR = shell.tempdir();
+const TEMP_DIR = os.tmpdir();
 
 const getTempDir = function() {
   return path.join(TEMP_DIR, uuid.v4());
@@ -38,7 +37,7 @@ const sharedHooks = {
       template: getTempDir()
     };
 
-    shell.mkdir(t.context.template);
+    fs.mkdirSync(t.context.template, {recursive: true});
     fs.writeFileSync(path.join(t.context.template, '.gitignore'), 'node_modules\n');
 
     // create the package.json
@@ -69,7 +68,7 @@ const sharedHooks = {
     };
 
     t.context.dir = getTempDir();
-    shell.cp('-R', t.context.template, t.context.dir);
+    fs.cpSync(t.context.template, t.context.dir, {recursive: true});
 
     t.context.installPackage = function(env = {}) {
       return promiseSpawn('node', [installLocalBin, BASE_DIR], {cwd: t.context.dir, env});
@@ -87,7 +86,7 @@ const sharedHooks = {
 
       // move a fake git binary into the temp context dir
       // this will cause git to fail to run
-      shell.cp(path.join(__dirname, 'fakegit.js'), gitDest);
+      fs.copyFileSync(path.join(__dirname, 'fakegit.js'), gitDest);
 
       return Object.assign({}, process.env, {
         PATH: `${t.context.dir}${separator}${process.env.PATH}`
@@ -97,12 +96,12 @@ const sharedHooks = {
   },
 
   afterEach: (t) => {
-    shell.rm('-rf', t.context.dir);
+    fs.rmSync(t.context.dir, {recursive: true, force: true});
     process.env.PATH = t.context.old.PATH;
   },
 
   after: (t) => {
-    shell.rm('-rf', t.context.template);
+    fs.rmSync(t.context.template, {recursive: true, force: true});
   }
 };
 

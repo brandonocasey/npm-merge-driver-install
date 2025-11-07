@@ -1,12 +1,12 @@
 const test = require('ava');
 const path = require('path');
-const shell = require('shelljs');
+const fs = require('fs');
 const getRoot = require('../src/get-root.js');
 const {sharedHooks} = require('./helpers.js');
 
 test.before((t) => {
   return sharedHooks.before(t).then(function() {
-    shell.mkdir(path.join(t.context.template, 'subdir'));
+    fs.mkdirSync(path.join(t.context.template, 'subdir'), {recursive: true});
 
   });
 });
@@ -27,7 +27,7 @@ test('can find root from sub directory', (t) => {
 });
 
 test('no root without .git', (t) => {
-  shell.rm('-rf', path.join(t.context.dir, '.git'));
+  fs.rmSync(path.join(t.context.dir, '.git'), {recursive: true, force: true});
   const result = getRoot(t.context.dir);
 
   t.falsy(result, 'is an empty string');
