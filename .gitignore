@@ -23,6 +23,11 @@ npm-debug.log*
 
 # Dependency directories
 node_modules/
+
+# Build and test output
+coverage
+dist
+
+# Tool caches
 .eslintcache
 .nyc_output
-coverage

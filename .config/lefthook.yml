@@ -1,0 +1,24 @@
+rc: .config/lefthookrc
+
+pre-commit:
+  parallel: true
+  commands:
+    markdown-lint:
+      glob: "*.md"
+      run: markdownlint-cli2 --config .config/project.markdownlint-cli2.mjs --fix {staged_files}
+      stage_fixed: true
+      fail_text: "Markdown linting failed"
+
+    biome:
+      glob: "*.{js,cjs,mjs,json}"
+      exclude:
+        - "package-lock.json"
+      run: biome check --write {staged_files}
+      stage_fixed: true
+      fail_text: "Biome linting failed"
+
+commit-msg:
+  commands:
+    commitlint:
+      run: commitlint --config .config/commitlint.config.js --edit {1}
+      fail_text: "Commit message does not follow conventional commits format"

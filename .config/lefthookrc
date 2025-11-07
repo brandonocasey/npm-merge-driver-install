@@ -1,0 +1,5 @@
+#!/bin/sh
+# RC file sourced by lefthook before running hooks
+# Adds local node_modules/.bin to PATH for access to project dependencies
+
+export PATH="./node_modules/.bin:$PATH"
