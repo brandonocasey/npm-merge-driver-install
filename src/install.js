@@ -21,7 +21,7 @@ const install = function(cwd, options) {
 
   uninstall(rootDir, {logger: {log: noop}});
 
-  const mergePath = path.relative(rootDir, path.resolve(__dirname, 'merge.js'));
+  const mergePath = path.relative(rootDir, require.resolve('./merge.js'));
   const infoDir = path.join(rootDir, '.git', 'info');
 
   if (!fs.existsSync(infoDir)) {
