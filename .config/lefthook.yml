@@ -16,9 +16,3 @@ pre-commit:
       run: biome check --write {staged_files}
       stage_fixed: true
       fail_text: "Biome linting failed"
-
-commit-msg:
-  commands:
-    commitlint:
-      run: commitlint --config .config/commitlint.config.js --edit {1}
-      fail_text: "Commit message does not follow conventional commits format"

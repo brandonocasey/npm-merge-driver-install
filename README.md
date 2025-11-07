@@ -1,15 +1,12 @@
 # npm-merge-driver-install
 
-[![Build Status](https://travis-ci.org/BrandonOCasey/npm-merge-driver-install.svg?branch=master)](https://travis-ci.org/BrandonOCasey/npm-merge-driver-install)
-[![Greenkeeper badge](https://badges.greenkeeper.io/BrandonOCasey/npm-merge-driver-install.svg)](https://greenkeeper.io/)
-
 A package to automatically merge package-lock.json conflicts. Heavily based on
 [npm-merge-driver](https://www.npmjs.com/package/npm-merge-driver) with automated setup at package install time and a
 single small dependency for ci checking.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
-**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+## Table of contents
 
 - [Installation](#installation)
 - [I don't want it to install in ci](#i-dont-want-it-to-install-in-ci)

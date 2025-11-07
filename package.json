@@ -27,6 +27,7 @@
   "scripts": {
     "test": "npm-run-all2 -lcp lint test:*",
     "test:unit": "vitest run",
+    "coverage": "vitest run --coverage",
     "lint": "npm-run-all2 -lcp lint:*",
     "lint:code": "biome check --write .",
     "lint:docs": "markdownlint-cli2 --fix --config .config/project.markdownlint-cli2.mjs '**/*.md'",
@@ -40,6 +41,7 @@
     "@biomejs/biome": "2.3.0",
     "@commitlint/cli": "20.1.0",
     "@commitlint/config-angular": "20.0.0",
+    "@vitest/coverage-v8": "4.0.8",
     "conventional-changelog-angular": "8.1.0",
     "conventional-changelog-cli": "5.0.0",
     "install-local": "3.0.1",
@@ -52,6 +54,5 @@
   },
   "overrides": {
     "rollup": "4.52.5"
-  },
-  "dependencies": {}
+  }
 }
