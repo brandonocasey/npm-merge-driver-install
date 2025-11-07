@@ -9,6 +9,7 @@ const { getGitDir } = require("./get-git-dir.js");
 const logger = require("./logger.js");
 const uninstall = require("./uninstall.js");
 const noop = require("./noop.js");
+const { getAllLockfilePatterns } = require("./package-managers.js");
 
 const install = (cwd, options) => {
   const logger_ = options?.logger || logger;
@@ -41,7 +42,7 @@ const install = (cwd, options) => {
   // add to git config
   const configOne = spawnSync(
     "git",
-    ["config", "--local", "merge.npm-merge-driver-install.name", "automatically merge npm lockfiles"],
+    ["config", "--local", "merge.npm-merge-driver-install.name", "automatically merge package manager lockfiles"],
     { cwd: rootDir, env },
   );
   const configTwo = spawnSync(
@@ -64,10 +65,14 @@ const install = (cwd, options) => {
   }
 
   if (attrContents && !attrContents.match(/[\n\r]$/g)) {
-    attrContents = "\n";
+    attrContents += "\n";
   }
-  attrContents += "npm-shrinkwrap.json merge=npm-merge-driver-install\n";
-  attrContents += "package-lock.json merge=npm-merge-driver-install\n";
+
+  const lockfilePatterns = getAllLockfilePatterns();
+
+  for (const pattern of lockfilePatterns) {
+    attrContents += `${pattern} merge=npm-merge-driver-install\n`;
+  }
 
   fs.writeFileSync(attrFile, attrContents);
 

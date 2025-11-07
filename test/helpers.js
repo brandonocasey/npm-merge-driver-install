@@ -8,6 +8,7 @@ const os = require("node:os");
 
 const BASE_DIR = path.resolve(__dirname, "..");
 const TEMP_DIR = os.tmpdir();
+const LOCAL_BIN = path.join(BASE_DIR, "node_modules", ".bin");
 
 let uuidPromise;
 
@@ -26,7 +27,9 @@ const promiseSpawn = (bin, args, options = {}) => {
   options.ignoreExitCode = undefined;
   options = { stdio: "pipe", encoding: "utf8", ...options };
   options.env = options.env || {};
-  options.env.PATH = options.env.PATH || process.env.PATH;
+
+  const existingPath = options.env.PATH || process.env.PATH || "";
+  options.env.PATH = existingPath ? `${LOCAL_BIN}${path.delimiter}${existingPath}` : LOCAL_BIN;
 
   return spawnPromise(bin, args, options).then(({ status, stderr, stdout, combined }) => {
     if (!ignoreExitCode && status !== 0) {
