@@ -85,6 +85,9 @@ const sharedHooks = {
       // this will cause git to fail to run
       fs.copyFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fakegit.js'), gitDest);
 
+      // Make the file executable
+      fs.chmodSync(gitDest, 0o755);
+
       return { ...process.env, PATH: `${context.dir}${separator}${process.env.PATH}` };
     };
   },
