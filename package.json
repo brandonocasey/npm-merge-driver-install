@@ -2,6 +2,7 @@
   "name": "npm-merge-driver-install",
   "version": "4.0.0-1",
   "description": "A package to install npm-merge-driver locally and automatically.",
+  "type": "module",
   "repository": {
     "type": "git",
     "url": "https://github.com/brandonocasey/npm-merge-driver-install"
@@ -24,37 +25,30 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "vjsstandard",
-    "test": "npm-run-all -c -p lint test:*",
-    "test:unit": "nyc --reporter=json --reporter=text ava --timeout 1m './test/*.test.js'",
-    "preversion": "npm test",
+    "test": "npm-run-all2 -lcp lint test:*",
+    "test:unit": "vitest run",
+    "lint": "npm-run-all2 -lcp lint:*",
+    "lint:code": "biome check --write .",
+    "lint:docs": "markdownlint-cli2 --fix --config .config/project.markdownlint-cli2.mjs '**/*.md'",
+    "preversion": "npm run lint",
     "version": "is-prerelease || npm run update-changelog && git add CHANGELOG.md",
-    "update-changelog": "conventional-changelog -p videojs -i CHANGELOG.md -s",
-    "prepublishOnly": "vjsverify --skip-syntax --verbose"
+    "update-changelog": "conventional-changelog -p .config/changelog.config.js -i CHANGELOG.md -s",
+    "changelog": "conventional-changelog -p .config/changelog.config.js -i CHANGELOG.md -s",
+    "changelog:all": "conventional-changelog -p .config/changelog.config.js -i CHANGELOG.md -s -r 0"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.3.0",
     "@brandonocasey/spawn-promise": "^0.2.0",
-    "ava": "^3.15.0",
-    "conventional-changelog-cli": "^2.1.1",
-    "conventional-changelog-videojs": "^3.0.2",
-    "doctoc": "^2.1.0",
-    "husky": "^4.3.8",
+    "@commitlint/cli": "20.1.0",
+    "@commitlint/config-angular": "20.0.0",
+    "conventional-changelog-angular": "8.1.0",
+    "conventional-changelog-cli": "5.0.0",
     "install-local": "^3.0.1",
-    "lint-staged": "^12.1.2",
+    "lefthook": "2.0.1",
+    "markdownlint-cli2": "0.18.1",
     "not-prerelease": "^1.0.1",
-    "npm-run-all": "4.1.5",
-    "nyc": "15.1.0",
+    "npm-run-all2": "8.0.4",
     "uuid": "^8.3.2",
-    "videojs-generator-verify": "~4.0.1",
-    "videojs-standard": "^9.0.1"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.js": "vjsstandard --fix",
-    "README.md": "doctoc --no-title"
+    "vitest": "4.0.7"
   }
 }
