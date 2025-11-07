@@ -3,7 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import getGitDir from './get-git-dir.js';
+import { getGitDir } from './get-git-dir.js';
+import getRoot from './get-root.js';
 
 const inConfig = (gitDir, _options) => {
   const gitConfigPath = path.join(gitDir, 'config');
@@ -30,8 +31,15 @@ const inAttr = (gitDir, _options) => {
 };
 
 const isInstalled = (cwd, options) => {
+  const getRoot_ = options?.getRoot || getRoot;
   const getGitDir_ = options?.getGitDir || getGitDir;
-  const gitDir = getGitDir_(cwd, options);
+  const rootDir = getRoot_(cwd, options);
+
+  if (!rootDir) {
+    return false;
+  }
+
+  const gitDir = getGitDir_(rootDir, options);
 
   if (!gitDir) {
     return false;

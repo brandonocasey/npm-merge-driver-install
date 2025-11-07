@@ -240,6 +240,7 @@ describe('integration', () => {
         2,
       ),
     );
+    // biome-ignore lint/security/noSecrets: test data is not a secret
     fs.writeFileSync(mainTsPath, "import notPrerelease from 'not-prerelease';\nconsole.log(notPrerelease);");
 
     await promiseSpawn('deno', ['cache', 'main.ts'], { cwd: context.dir });
@@ -267,7 +268,7 @@ describe('integration', () => {
     // Add a different package
     const denoJsonMain = JSON.parse(fs.readFileSync(denoJsonPath, 'utf8'));
 
-    denoJsonMain.imports['uuid'] = 'npm:uuid@^9.0.0';
+    denoJsonMain.imports.uuid = 'npm:uuid@^9.0.0';
     fs.writeFileSync(denoJsonPath, JSON.stringify(denoJsonMain, null, 2));
 
     await promiseSpawn('deno', ['cache', '--reload', 'main.ts'], { cwd: context.dir });

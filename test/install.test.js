@@ -65,7 +65,11 @@ describe('install', () => {
 
   test('can fail on git config', () => {
     const env = context.fakegit();
-    const exitCode = context.install({ env, getGitDir: () => path.join(context.dir, '.git') });
+    const exitCode = context.install({
+      env,
+      getRoot: () => context.dir,
+      getGitDir: () => path.join(context.dir, '.git'),
+    });
 
     expect(isInstalled(context.dir)).toBe(false);
     expect(exitCode).toBe(1);

@@ -2,6 +2,7 @@ import os from 'node:os';
 import { describe, expect, test } from 'vitest';
 import { getAllLockfilePatterns, getPackageManagerByLockfile, packageManagers } from '../src/package-managers.js';
 
+// biome-ignore lint/security/noSecrets: function name is not a secret
 describe('packageManagers', () => {
   test('packageManagers registry contains expected package managers', () => {
     expect(packageManagers.npm).toBeTruthy();
@@ -38,6 +39,7 @@ describe('packageManagers', () => {
     expect(typeof bun.supportsTextMerge).toBe('function');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns correct package manager for npm', () => {
     const pm = getPackageManagerByLockfile('package-lock.json');
 

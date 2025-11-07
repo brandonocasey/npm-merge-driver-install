@@ -1,10 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
-import getGitDir from '../src/get-git-dir.js';
+import getRoot from '../src/get-root.js';
 import { sharedHooks } from './helpers.js';
 
-describe('get-git-dir', () => {
+describe('get-root', () => {
   const context = {};
 
   beforeAll(async () => {
@@ -24,42 +24,42 @@ describe('get-git-dir', () => {
     sharedHooks.after(context);
   });
 
-  test('can find git dir when it exists', () => {
-    const result = getGitDir(context.dir);
+  test('can find root dir when it exists', () => {
+    const result = getRoot(context.dir);
 
     expect(result).toBeTruthy();
-    expect(result.endsWith('.git')).toBe(true);
+    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
   });
 
-  test('can find git dir from sub directory', () => {
-    const result = getGitDir(path.join(context.dir, 'subdir'));
+  test('can find root dir from sub directory', () => {
+    const result = getRoot(path.join(context.dir, 'subdir'));
 
     expect(result).toBeTruthy();
-    expect(result.endsWith('.git')).toBe(true);
+    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
   });
 
-  test('no git dir without .git', () => {
+  test('no root dir without .git', () => {
     fs.rmSync(path.join(context.dir, '.git'), { recursive: true, force: true });
-    const result = getGitDir(context.dir);
+    const result = getRoot(context.dir);
 
     expect(result).toBeFalsy();
   });
 
   test('fails due to bad git executable', () => {
     const env = context.fakegit();
-    const result = getGitDir(context.dir, { env });
+    const result = getRoot(context.dir, { env });
 
     expect(result).toBeFalsy();
   });
 
   test('fails without git executable', () => {
-    const result = getGitDir(context.dir, { env: { PATH: '' } });
+    const result = getRoot(context.dir, { env: { PATH: '' } });
 
     expect(result).toBeFalsy();
   });
 
   test('can use process.cwd()', () => {
-    const result = getGitDir(null, {
+    const result = getRoot(null, {
       process: { cwd: () => context.dir },
     });
 
@@ -67,7 +67,7 @@ describe('get-git-dir', () => {
   });
 
   test('can use INIT_CWD', () => {
-    const result = getGitDir(null, {
+    const result = getRoot(null, {
       env: { INIT_CWD: context.dir },
     });
 

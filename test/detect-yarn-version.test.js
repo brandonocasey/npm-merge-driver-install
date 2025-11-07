@@ -4,6 +4,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import detectYarnVersion from '../src/detect-yarn-version.js';
 import { sharedHooks } from './helpers.js';
 
+// biome-ignore lint/security/noSecrets: function name is not a secret
 describe('detectYarnVersion', () => {
   const context = {};
 
