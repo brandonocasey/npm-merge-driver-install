@@ -1,0 +1,15 @@
+# Ensure all text files have LF line endings in the repository and working directory
+* text=auto eol=lf
+
+# Ensure shell scripts and Node.js files always have LF
+*.sh text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows-specific files can have CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
