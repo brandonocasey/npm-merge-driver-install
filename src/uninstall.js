@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const spawnSync = require('child_process').spawnSync;
-const getRoot = require('./get-root.js');
+const getGitDir = require('./get-git-dir.js');
 const logger = require('./logger.js');
 const RE = new RegExp('.* merge\\s*=\\s*npm-merge-driver-install$');
 const RE2 = new RegExp('.* merge\\s*=\\s*npm-merge-driver$');
@@ -10,25 +10,25 @@ const RE2 = new RegExp('.* merge\\s*=\\s*npm-merge-driver$');
 const uninstall = function(cwd, options) {
   const logger_ = options && options.logger || logger;
   const env = options && options.env || process.env;
-  const rootDir = getRoot(cwd, options);
+  const gitDir = getGitDir(cwd, options);
 
   // we dont check isInstalled here as isInstalled returns true
   // for full installs only
-  if (rootDir) {
+  if (gitDir) {
     // remove git config settings
     spawnSync(
       'git',
       ['config', '--local', '--remove-section', 'merge.npm-merge-driver-install'],
-      {cwd: rootDir, env}
+      {cwd, env}
     );
 
     spawnSync(
       'git',
       ['config', '--local', '--remove-section', 'merge.npm-merge-driver'],
-      {cwd: rootDir, env}
+      {cwd, env}
     );
 
-    const attrFile = path.join(rootDir, '.git', 'info', 'attributes');
+    const attrFile = path.join(gitDir, 'info', 'attributes');
 
     // remove git attributes
     if (fs.existsSync(attrFile)) {

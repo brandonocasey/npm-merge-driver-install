@@ -57,7 +57,7 @@ test('does not install with bad git command', (t) => {
 
 test('can fail on git config', (t) => {
   const env = t.context.fakegit();
-  const exitCode = t.context.install({env, getRoot: () => t.context.dir});
+  const exitCode = t.context.install({env, getGitDir: () => path.join(t.context.dir, '.git')});
 
   t.false(isInstalled(t.context.dir));
   t.is(exitCode, 1);
