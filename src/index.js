@@ -1,7 +1,2 @@
-const install = require('./install.js');
-const uninstall = require('./uninstall.js');
-
-module.exports = {
-  install,
-  uninstall
-};
+export { default as install } from './install.js';
+export { default as uninstall } from './uninstall.js';

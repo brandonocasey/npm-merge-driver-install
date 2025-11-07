@@ -1,27 +1,28 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
-const path = require('path');
-const fs = require('fs');
-const spawnSync = require('child_process').spawnSync;
-const getGitDir = require('./get-git-dir.js');
-const logger = require('./logger.js');
-const uninstall = require('./uninstall.js');
-const noop = require('./noop.js');
+import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import getGitDir from './get-git-dir.js';
+import { log } from './logger.js';
+import noop from './noop.js';
+import uninstall from './uninstall.js';
 
-const install = function(cwd, options) {
-  const logger_ = options && options.logger || logger;
-  const env = options && options.env || process.env;
-  const getGitDir_ = options && options.getGitDir || getGitDir;
+const install = (cwd, options) => {
+  const logger = options?.logger || { log };
+  const env = options?.env || process.env;
+  const getGitDir_ = options?.getGitDir || getGitDir;
   const gitDir = getGitDir_(cwd, options);
 
   if (!gitDir) {
-    logger_.log('Current working directory is not using git or git is not installed, skipping install.');
+    logger.log('Current working directory is not using git or git is not installed, skipping install.');
     return 1;
   }
 
-  uninstall(cwd, {logger: {log: noop}});
+  uninstall(cwd, { logger: { log: noop } });
 
-  const mergePath = require.resolve('./merge.js');
+  const mergePath = fileURLToPath(new URL('./merge.js', import.meta.url));
   const infoDir = path.join(gitDir, 'info');
 
   if (!fs.existsSync(infoDir)) {
@@ -32,16 +33,16 @@ const install = function(cwd, options) {
   const configOne = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge npm lockfiles'],
-    {cwd, env}
+    { cwd, env },
   );
   const configTwo = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.driver', `node '${mergePath}' %A %O %B %P`],
-    {cwd, env}
+    { cwd, env },
   );
 
   if (configOne.status !== 0 || configTwo.status !== 0) {
-    logger_.log('Failed to configure npm-merge-driver-install in git directory');
+    logger.log('Failed to configure npm-merge-driver-install in git directory');
     return 1;
   }
 
@@ -54,25 +55,26 @@ const install = function(cwd, options) {
   }
 
   if (attrContents && !attrContents.match(/[\n\r]$/g)) {
-    attrContents = '\n';
+    attrContents += '\n';
   }
   attrContents += 'npm-shrinkwrap.json merge=npm-merge-driver-install\n';
   attrContents += 'package-lock.json merge=npm-merge-driver-install\n';
 
   fs.writeFileSync(attrFile, attrContents);
 
-  logger_.log('installed successfully');
+  logger.log('installed successfully');
 
   return 0;
 };
 
-module.exports = install;
+export default install;
 
 // The code below will only run when working as an executable
-// that way we can test the cli using require in unit tests.
-if (require.main === module) {
+// that way we can test the cli using import in unit tests.
+const isMainModule = fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(process.argv[1]);
+
+if (isMainModule) {
   const exitCode = install();
 
   process.exit(exitCode);
 }
-
