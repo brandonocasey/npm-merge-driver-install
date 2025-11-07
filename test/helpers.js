@@ -1,10 +1,10 @@
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
-import spawnPromise from '@brandonocasey/spawn-promise';
 import { v4 as uuidv4 } from 'uuid';
 import isInstalled from '../src/is-installed.js';
 
@@ -20,15 +20,48 @@ const promiseSpawn = (bin, args, options = {}) => {
   const ignoreExitCode = options.ignoreExitCode;
 
   delete options.ignoreExitCode;
-  options = { shell: true, stdio: 'pipe', encoding: 'utf8', ...options };
+  options = { stdio: 'pipe', encoding: 'utf8', ...options };
+
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  return spawnPromise(bin, args, options).then(({ status, stderr, stdout, combined }) => {
-    if (!ignoreExitCode && status !== 0) {
-      return Promise.reject(`command ${bin} ${args.join(' ')} failed with code ${status}\n${combined}`);
+  // Windows needs shell: true to run .cmd files
+  if (os.platform() === 'win32') {
+    options.shell = true;
+  }
+
+  return new Promise((resolve, reject) => {
+    const child = spawn(bin, args, options);
+    let stdout = '';
+    let stderr = '';
+
+    if (child.stdout) {
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
     }
-    return Promise.resolve({ exitCode: status, stderr, stdout });
+
+    if (child.stderr) {
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+    }
+
+    child.on('error', (error) => {
+      reject(error);
+    });
+
+    child.on('close', (exitCode) => {
+      if (!ignoreExitCode && exitCode !== 0) {
+        reject(new Error(`command ${bin} ${args.join(' ')} failed with code ${exitCode}\n${stdout}${stderr}`));
+      } else {
+        resolve({
+          exitCode,
+          stderr,
+          stdout,
+        });
+      }
+    });
   });
 };
 
@@ -45,7 +78,7 @@ const sharedHooks = {
         // create the .git dir
         return promiseSpawn('git', ['init'], { cwd: context.template });
       })
-      .then((_result) => promiseSpawn('npm', ['install', '--package-lock-only']))
+      .then((_result) => promiseSpawn('npm', ['install', '--package-lock-only'], { cwd: context.template }))
       .then((_result) => promiseSpawn('git', ['add', '--all'], { cwd: context.template }))
       .then((_result) =>
         promiseSpawn('git', ['config', '--local', 'user.email', '"you@example.com"'], { cwd: context.template }),

@@ -23,7 +23,6 @@ const ret = spawnSync('git', ['merge-file', '-p', currentVersion, ancestorVersio
 
 fs.writeFileSync(absoluteFilePath, ret.stdout);
 
-const npmCmd = os.platform() === 'win32' ? 'npm.cmd' : 'npm';
 const npmArgs = ['install', '--package-lock-only', '--prefer-offline', '--no-audit', '--progress=false'];
 
 const spawnOptions = {
@@ -31,12 +30,17 @@ const spawnOptions = {
   stdio: ['pipe', 'pipe', 'pipe'],
 };
 
-// Windows needs shell: true to run .cmd files
-if (os.platform() === 'win32') {
-  spawnOptions.shell = true;
-}
+let install;
 
-const install = spawnSync(npmCmd, npmArgs, spawnOptions);
+// Windows needs shell: true to run .cmd files
+// Use string form to avoid DEP0190 deprecation warning
+if (os.platform() === 'win32') {
+  const command = `npm.cmd ${npmArgs.join(' ')}`;
+
+  install = spawnSync(command, { ...spawnOptions, shell: true });
+} else {
+  install = spawnSync('npm', npmArgs, spawnOptions);
+}
 
 if (install.status !== 0) {
   log(`${file} merge failure`);
