@@ -24,13 +24,27 @@ const promiseSpawn = (bin, args, options = {}) => {
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  // Windows needs shell: true to run .cmd files
+  // On Windows, append .cmd/.exe extensions for npm/yarn/pnpm commands
+  // This allows Node.js to find them without requiring shell: true
+  let spawnBin = bin;
+  const spawnArgs = args;
+
   if (os.platform() === 'win32') {
-    options.shell = true;
+    // Common package manager commands that need .cmd extension on Windows
+    const needsCmdExtension = ['npm', 'yarn', 'pnpm', 'yarn-classic', 'yarn-berry'];
+    if (needsCmdExtension.includes(bin)) {
+      spawnBin = `${bin}.cmd`;
+    } else if (bin === 'bun') {
+      spawnBin = 'bun.exe';
+    } else if (bin === 'deno') {
+      spawnBin = 'deno.exe';
+    }
+    // For other commands or if they already have an extension, use as-is
+    // Node.js spawn can handle them without shell: true
   }
 
   return new Promise((resolve, reject) => {
-    const child = spawn(bin, args, options);
+    const child = spawn(spawnBin, spawnArgs, options);
     let stdout = '';
     let stderr = '';
 
