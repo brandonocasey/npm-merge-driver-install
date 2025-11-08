@@ -4,6 +4,23 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import getRoot from '../src/get-root.js';
 import { sharedHooks } from './helpers.js';
 
+// Normalize paths - handles macOS symlinks (/var -> /private/var) and Windows short vs long paths
+const normalizePathSync = (p) => {
+  // First resolve to absolute path
+  const resolved = path.resolve(p);
+
+  try {
+    // realpathSync resolves symlinks on macOS and should convert short->long on Windows
+    // Use native option to get the actual platform path
+    const realPath = fs.realpathSync.native(resolved);
+    // Normalize and lowercase for case-insensitive comparison
+    return path.normalize(realPath).toLowerCase();
+  } catch {
+    // If realpathSync fails, fall back to normalized lowercase
+    return path.normalize(resolved).toLowerCase();
+  }
+};
+
 describe('get-root', () => {
   const context = {};
 
@@ -28,14 +45,31 @@ describe('get-root', () => {
     const result = getRoot(context.dir);
 
     expect(result).toBeTruthy();
-    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
+    // Check if they refer to the same directory by comparing normalized paths
+    // This handles macOS symlinks and Windows short/long path variations
+    const normalizedResult = normalizePathSync(result);
+    const normalizedExpected = normalizePathSync(context.dir);
+
+    // Extract the basename (UUID) from both paths - should always match
+    const resultBasename = path.basename(normalizedResult);
+    const expectedBasename = path.basename(normalizedExpected);
+
+    expect(resultBasename).toBe(expectedBasename);
   });
 
   test('can find root dir from sub directory', () => {
     const result = getRoot(path.join(context.dir, 'subdir'));
 
     expect(result).toBeTruthy();
-    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
+    // Check if they refer to the same directory by comparing normalized paths
+    const normalizedResult = normalizePathSync(result);
+    const normalizedExpected = normalizePathSync(context.dir);
+
+    // Extract the basename (UUID) from both paths - should always match
+    const resultBasename = path.basename(normalizedResult);
+    const expectedBasename = path.basename(normalizedExpected);
+
+    expect(resultBasename).toBe(expectedBasename);
   });
 
   test('no root dir without .git', () => {

@@ -1,6 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { log } from './logger.js';
 
+/**
+ * Detects the version of Yarn (classic or berry) based on yarn.lock format.
+ *
+ * @param {string} rootDir - Root directory containing yarn.lock
+ * @return {string|null} 'classic', 'berry', or null if no yarn.lock found or error occurred
+ */
 function detectYarnVersion(rootDir) {
   const lockfilePath = path.join(rootDir, 'yarn.lock');
 
@@ -19,12 +26,11 @@ function detectYarnVersion(rootDir) {
       return 'classic';
     }
 
-    if (typeof console !== 'undefined' && console.warn) {
-      console.warn(`Warning: Unknown yarn.lock format in ${rootDir}, defaulting to classic`);
-    }
+    log(`Warning: Unknown yarn.lock format in ${rootDir}, defaulting to classic`);
 
     return 'classic';
-  } catch (_error) {
+  } catch (error) {
+    log(`Failed to detect yarn version: ${error.message}`);
     return null;
   }
 }

@@ -15,7 +15,9 @@ describe('integration', () => {
     sharedHooks.beforeEach(context);
 
     await context.installPackage();
-    await promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], { cwd: context.dir });
+    await promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], {
+      cwd: context.dir,
+    });
     await promiseSpawn('npm', ['i', '--package-lock-only', '-D', 'not-prerelease'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-a', '-m', '"add not-prerelease to dev deps"'], { cwd: context.dir });
@@ -121,11 +123,24 @@ describe('integration', () => {
     expect(lsResult.stdout.toString().trim()).toBe('');
   });
 
-  test('can merge yarn.lock changes', async () => {
+  test('can merge yarn.lock changes (Yarn Classic v1)', async () => {
+    // Use system yarn if it's v1, otherwise use yarn-classic alias
+    let yarnCmd = 'yarn';
     try {
-      await promiseSpawn('yarn', ['--version'], { cwd: context.dir });
+      const versionResult = await promiseSpawn('yarn', ['--version'], { cwd: context.dir });
+      const version = versionResult.stdout.toString().trim();
+      // If version starts with 2, 3, 4, etc., try yarn-classic alias
+      if (!version.startsWith('1.')) {
+        try {
+          await promiseSpawn('yarn-classic', ['--version'], { cwd: context.dir });
+          yarnCmd = 'yarn-classic';
+        } catch (_error) {
+          console.warn('Yarn Classic (v1) not available; skipping yarn classic integration test');
+          return;
+        }
+      }
     } catch (_error) {
-      console.warn('yarn binary not available; skipping yarn integration test');
+      console.warn('yarn binary not available; skipping yarn classic integration test');
       return;
     }
 
@@ -136,27 +151,27 @@ describe('integration', () => {
     packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
     fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
-    await promiseSpawn('yarn', ['install'], { cwd: context.dir });
+    await promiseSpawn(yarnCmd, ['install'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
-    await promiseSpawn('git', ['commit', '-m', 'switch to yarn'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to yarn classic'], { cwd: context.dir });
 
     const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
 
     const mainBranch = result.stdout.toString().trim();
 
-    await promiseSpawn('git', ['checkout', '-b', 'yarn-test'], { cwd: context.dir });
+    await promiseSpawn('git', ['checkout', '-b', 'yarn-classic-test'], { cwd: context.dir });
 
-    await promiseSpawn('yarn', ['add', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn(yarnCmd, ['add', '-D', 'express'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-m', 'add express to devDeps'], { cwd: context.dir });
 
     await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
 
-    await promiseSpawn('yarn', ['add', 'express'], { cwd: context.dir });
+    await promiseSpawn(yarnCmd, ['add', 'express'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-m', 'add express to deps'], { cwd: context.dir });
 
-    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'yarn-test'], { cwd: context.dir });
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'yarn-classic-test'], { cwd: context.dir });
 
     // Either the lockfile was merged successfully or there was no conflict
     expect(mergeResult.stdout).toMatch(/(yarn\.lock merged successfully|Merge made by)/);
@@ -167,6 +182,101 @@ describe('integration', () => {
     const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
 
     expect(lsResult.stdout.toString().trim()).toBe('');
+
+    // Verify it's actually Yarn Classic lockfile format
+    const yarnLockPath = path.join(context.dir, 'yarn.lock');
+    const yarnLockContent = fs.readFileSync(yarnLockPath, 'utf8');
+    expect(yarnLockContent).toMatch(/# yarn lockfile v1/);
+  });
+
+  test('can merge yarn.lock changes (Yarn Berry v2+)', async () => {
+    // Try multiple methods to get Yarn Berry
+    let yarnCmd = 'yarn-berry';
+    let yarnArgs = [];
+
+    try {
+      // Try yarn-berry alias first
+      await promiseSpawn('yarn-berry', ['--version'], { cwd: context.dir });
+    } catch (_error) {
+      // Try system yarn and check if it's v2+
+      try {
+        const versionResult = await promiseSpawn('yarn', ['--version'], { cwd: context.dir });
+        const version = versionResult.stdout.toString().trim();
+        // If version starts with 2, 3, 4, etc., use system yarn
+        if (!version.startsWith('1.')) {
+          yarnCmd = 'yarn';
+        } else {
+          // Fall back to using npx to run Yarn Berry
+          yarnCmd = 'npx';
+          yarnArgs = ['--yes', 'yarn@berry'];
+        }
+      } catch (_error2) {
+        // Fall back to using npx to run Yarn Berry
+        yarnCmd = 'npx';
+        yarnArgs = ['--yes', 'yarn@berry'];
+      }
+    }
+
+    // Helper function to run yarn commands with proper args
+    const runYarn = (args, options) => {
+      return promiseSpawn(yarnCmd, [...yarnArgs, ...args], options);
+    };
+
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+
+    delete packageJson.dependencies;
+    packageJson.devDependencies = { 'not-prerelease': '^1.0.0' };
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+    // Configure git to handle Yarn Berry's binary install-state.gz file
+    await promiseSpawn('git', ['config', 'merge.ours.driver', 'true'], { cwd: context.dir });
+    const gitAttributesPath = path.join(context.dir, '.git', 'info', 'attributes');
+    const gitAttributesDir = path.dirname(gitAttributesPath);
+    if (!fs.existsSync(gitAttributesDir)) {
+      fs.mkdirSync(gitAttributesDir, { recursive: true });
+    }
+    const existingAttrs = fs.existsSync(gitAttributesPath) ? fs.readFileSync(gitAttributesPath, 'utf8') : '';
+    if (!existingAttrs.includes('.yarn/install-state.gz')) {
+      fs.appendFileSync(gitAttributesPath, '.yarn/install-state.gz merge=ours\n');
+    }
+
+    await runYarn(['install'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'switch to yarn berry'], { cwd: context.dir });
+
+    const result = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+
+    const mainBranch = result.stdout.toString().trim();
+
+    await promiseSpawn('git', ['checkout', '-b', 'yarn-berry-test'], { cwd: context.dir });
+
+    await runYarn(['add', '-D', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to devDeps'], { cwd: context.dir });
+
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    await runYarn(['add', 'express'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add express to deps'], { cwd: context.dir });
+
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'yarn-berry-test'], { cwd: context.dir });
+
+    // Either the lockfile was merged successfully or there was no conflict
+    expect(mergeResult.stdout).toMatch(/(yarn\.lock merged successfully|Merge made by)/);
+
+    // Verify merge completed successfully
+    expect(mergeResult.exitCode).toBe(0);
+
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
+
+    expect(lsResult.stdout.toString().trim()).toBe('');
+
+    // Verify it's actually Yarn Berry lockfile format
+    const yarnLockPath = path.join(context.dir, 'yarn.lock');
+    const yarnLockContent = fs.readFileSync(yarnLockPath, 'utf8');
+    expect(yarnLockContent).toMatch(/__metadata:/);
   });
 
   test('can merge bun.lockb changes', async () => {
@@ -212,11 +322,14 @@ describe('integration', () => {
     const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
 
     expect(lsResult.stdout.toString().trim()).toBe('');
-  });
+  }, 120000); // 2 minute timeout for bun operations on Windows
 
   test('can merge deno.lock changes', async () => {
+    const denoCmd = 'npx';
+    const denoArgs = ['--yes', 'deno'];
+
     try {
-      await promiseSpawn('deno', ['--version'], { cwd: context.dir });
+      await promiseSpawn(denoCmd, [...denoArgs, '--version'], { cwd: context.dir });
     } catch (_error) {
       console.warn('deno binary not available; skipping deno integration test');
       return;
@@ -245,10 +358,9 @@ describe('integration', () => {
         2,
       ),
     );
-    // biome-ignore lint/security/noSecrets: test data is not a secret
-    fs.writeFileSync(mainTsPath, "import notPrerelease from 'not-prerelease';\nconsole.log(notPrerelease);");
+    fs.writeFileSync(mainTsPath, "console.log('Hello from Deno');");
 
-    await promiseSpawn('deno', ['cache', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn(denoCmd, [...denoArgs, 'install'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-m', 'switch to deno'], { cwd: context.dir });
 
@@ -264,7 +376,7 @@ describe('integration', () => {
     denoJson.imports.express = 'npm:express@^4.18.0';
     fs.writeFileSync(denoJsonPath, JSON.stringify(denoJson, null, 2));
 
-    await promiseSpawn('deno', ['cache', '--reload', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn(denoCmd, [...denoArgs, 'install'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-m', 'add express'], { cwd: context.dir });
 
@@ -276,16 +388,95 @@ describe('integration', () => {
     denoJsonMain.imports.uuid = 'npm:uuid@^9.0.0';
     fs.writeFileSync(denoJsonPath, JSON.stringify(denoJsonMain, null, 2));
 
-    await promiseSpawn('deno', ['cache', '--reload', 'main.ts'], { cwd: context.dir });
+    await promiseSpawn(denoCmd, [...denoArgs, 'install'], { cwd: context.dir });
     await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
     await promiseSpawn('git', ['commit', '-m', 'add uuid'], { cwd: context.dir });
 
-    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'deno-test'], { cwd: context.dir });
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'deno-test'], {
+      cwd: context.dir,
+      ignoreExitCode: true,
+    });
 
     expect(mergeResult.stdout).toMatch(/deno\.lock merged successfully/);
 
+    // Resolve deno.json conflict by merging the imports manually
+    const currentResult = await promiseSpawn('git', ['show', ':2:deno.json'], { cwd: context.dir });
+    const incomingResult = await promiseSpawn('git', ['show', ':3:deno.json'], { cwd: context.dir });
+
+    const currentDenoJson = JSON.parse(currentResult.stdout);
+    const incomingDenoJson = JSON.parse(incomingResult.stdout);
+
+    const mergedDenoJson = {
+      imports: {
+        ...currentDenoJson.imports,
+        ...incomingDenoJson.imports,
+      },
+    };
+
+    fs.writeFileSync(denoJsonPath, JSON.stringify(mergedDenoJson, null, 2));
+    await promiseSpawn('git', ['add', 'deno.json'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '--no-edit'], { cwd: context.dir });
+
     const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
 
+    expect(lsResult.stdout.toString().trim()).toBe('');
+  });
+
+  test('can automatically resolve package.json conflicts', async () => {
+    // Enable package.json conflict resolution for this test
+    await promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install', '--resolve-package-json'], {
+      cwd: context.dir,
+    });
+
+    const branchResult = await promiseSpawn('git', ['rev-parse', '--abbrev-ref', 'HEAD'], { cwd: context.dir });
+    const mainBranch = branchResult.stdout.toString().trim();
+
+    // Create a scenario where package.json will have a REAL conflict
+    // (both branches modify the same section - dependencies)
+    await promiseSpawn('git', ['checkout', '-b', 'package-json-test'], { cwd: context.dir });
+
+    // On the test branch, add lodash to dependencies
+    const packageJsonPath = path.join(context.dir, 'package.json');
+    const packageJson1 = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    packageJson1.dependencies = packageJson1.dependencies || {};
+    packageJson1.dependencies.lodash = '^4.17.21';
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson1, null, 2));
+
+    await promiseSpawn('npm', ['i', '--package-lock-only'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add lodash'], { cwd: context.dir });
+
+    // On main branch, add axios to dependencies (same section - this will conflict!)
+    await promiseSpawn('git', ['checkout', mainBranch], { cwd: context.dir });
+
+    const packageJson2 = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    packageJson2.dependencies = packageJson2.dependencies || {};
+    packageJson2.dependencies.axios = '^1.6.0';
+    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson2, null, 2));
+
+    await promiseSpawn('npm', ['i', '--package-lock-only'], { cwd: context.dir });
+    await promiseSpawn('git', ['add', '--all'], { cwd: context.dir });
+    await promiseSpawn('git', ['commit', '-m', 'add axios'], { cwd: context.dir });
+
+    // Merge should succeed and automatically resolve package.json with 'ours' strategy
+    const mergeResult = await promiseSpawn('git', ['merge', '--no-edit', 'package-json-test'], {
+      cwd: context.dir,
+    });
+
+    // Verify the merge succeeded
+    expect(mergeResult.stdout).toMatch(/package-lock.json merged successfully/);
+    expect(mergeResult.stdout).toMatch(/package.json conflicts resolved successfully/);
+    expect(mergeResult.exitCode).toBe(0);
+
+    // Verify package.json was auto-resolved
+    // With 'ours' strategy, parse-conflict-json does a deep merge favoring 'ours' values
+    // Both dependencies should be present since they're different keys
+    const finalPackageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    expect(finalPackageJson.dependencies).toHaveProperty('axios');
+    expect(finalPackageJson.dependencies).toHaveProperty('lodash');
+
+    // Verify no unresolved conflicts
+    const lsResult = await promiseSpawn('git', ['ls-files', '-u'], { cwd: context.dir });
     expect(lsResult.stdout.toString().trim()).toBe('');
   });
 });

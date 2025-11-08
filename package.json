@@ -19,6 +19,9 @@
     "npm-merge-driver-merge": "src/merge.js",
     "npm-merge-driver-is-installed": "src/is-installed.js"
   },
+  "files": [
+    "src"
+  ],
   "homepage": "https://github.com/brandonocasey/npm-merge-driver-install",
   "keywords": [],
   "engine": {

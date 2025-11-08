@@ -143,7 +143,7 @@ describe('packageManagers', () => {
   test('bun getExecutable returns correct value for current platform', () => {
     const bun = packageManagers.bun;
     const executable = bun.getExecutable();
-    const expected = os.platform() === 'win32' ? 'bun.exe' : 'bun';
+    const expected = os.platform() === 'win32' ? 'npx.cmd --yes bun' : 'bun';
 
     expect(executable).toBe(expected);
   });
@@ -151,7 +151,7 @@ describe('packageManagers', () => {
   test('deno getExecutable returns correct value for current platform', () => {
     const deno = packageManagers.deno;
     const executable = deno.getExecutable();
-    const expected = os.platform() === 'win32' ? 'deno.exe' : 'deno';
+    const expected = os.platform() === 'win32' ? 'npx.cmd --yes deno' : 'npx --yes deno';
 
     expect(executable).toBe(expected);
   });
@@ -174,28 +174,28 @@ describe('packageManagers', () => {
     const yarn = packageManagers['yarn-classic'];
     const args = yarn.getMergeArgs();
 
-    expect(args).toEqual(['install', '--frozen-lockfile']);
+    expect(args).toEqual(['install', '--prefer-offline']);
   });
 
   test('yarn-berry getMergeArgs returns correct arguments', () => {
     const yarn = packageManagers['yarn-berry'];
     const args = yarn.getMergeArgs();
 
-    expect(args).toEqual(['install', '--mode=skip-build']);
+    expect(args).toEqual(['install', '--mode=update-lockfile']);
   });
 
   test('bun getMergeArgs returns correct arguments', () => {
     const bun = packageManagers.bun;
     const args = bun.getMergeArgs();
 
-    expect(args).toEqual(['install', '--frozen-lockfile']);
+    expect(args).toEqual(['install', '--lockfile-only']);
   });
 
   test('deno getMergeArgs returns correct arguments', () => {
     const deno = packageManagers.deno;
     const args = deno.getMergeArgs();
 
-    expect(args).toEqual(['cache', '--reload']);
+    expect(args).toEqual(['install', '--frozen=false']);
   });
 
   // biome-ignore lint/security/noSecrets: test name is not a secret

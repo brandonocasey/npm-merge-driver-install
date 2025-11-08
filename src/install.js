@@ -11,6 +11,11 @@ import noop from './noop.js';
 import { getAllLockfilePatterns } from './package-managers.js';
 import uninstall from './uninstall.js';
 
+const RESOLVE_STRATEGIES = {
+  OURS: 'ours',
+  THEIRS: 'theirs',
+};
+
 const configureGitMergeDriver = (rootDir, mergePath, env, resolvePackageJson) => {
   const configOne = spawnSync(
     'git',
@@ -37,7 +42,7 @@ const configureGitMergeDriver = (rootDir, mergePath, env, resolvePackageJson) =>
   return configOne.status === 0 && configTwo.status === 0 && configThree.status === 0;
 };
 
-const updateGitAttributes = (attrFile, lockfilePatterns) => {
+const updateGitAttributes = (attrFile, lockfilePatterns, includePackageJson) => {
   let attrContents = '';
 
   if (fs.existsSync(attrFile)) {
@@ -50,6 +55,11 @@ const updateGitAttributes = (attrFile, lockfilePatterns) => {
 
   for (const pattern of lockfilePatterns) {
     attrContents += `${pattern} merge=npm-merge-driver-install\n`;
+  }
+
+  // If package.json conflict resolution is enabled, also register package.json
+  if (includePackageJson) {
+    attrContents += 'package.json merge=npm-merge-driver-install\n';
   }
 
   fs.writeFileSync(attrFile, attrContents);
@@ -70,7 +80,7 @@ const install = (cwd, options) => {
 
   uninstall(rootDir, { logger: { log: noop }, env, getGitDir: getGitDir_ });
 
-  const mergePath = path.relative(rootDir, fileURLToPath(new URL('./merge.js', import.meta.url)));
+  const mergePath = fileURLToPath(new URL('./merge.js', import.meta.url));
   const gitDir = getGitDir_(rootDir, options);
 
   if (!gitDir) {
@@ -94,7 +104,7 @@ const install = (cwd, options) => {
   const attrFile = path.join(infoDir, 'attributes');
   const lockfilePatterns = getAllLockfilePatterns();
 
-  updateGitAttributes(attrFile, lockfilePatterns);
+  updateGitAttributes(attrFile, lockfilePatterns, Boolean(resolvePackageJson));
 
   logger.log('installed successfully');
 
@@ -112,11 +122,13 @@ if (isMainModule) {
   let resolvePackageJson;
   for (const arg of process.argv.slice(2)) {
     if (arg === '--resolve-package-json') {
-      resolvePackageJson = 'ours';
+      resolvePackageJson = RESOLVE_STRATEGIES.OURS;
     } else if (arg.startsWith('--resolve-package-json=')) {
       resolvePackageJson = arg.split('=')[1];
-      if (resolvePackageJson !== 'ours' && resolvePackageJson !== 'theirs') {
-        log(`Invalid --resolve-package-json value: ${resolvePackageJson}. Must be 'ours' or 'theirs'.`);
+      if (resolvePackageJson !== RESOLVE_STRATEGIES.OURS && resolvePackageJson !== RESOLVE_STRATEGIES.THEIRS) {
+        log(
+          `Invalid --resolve-package-json value: ${resolvePackageJson}. Must be '${RESOLVE_STRATEGIES.OURS}' or '${RESOLVE_STRATEGIES.THEIRS}'.`,
+        );
         process.exit(1);
       }
     }

@@ -140,8 +140,19 @@ import isCI from 'is-ci';
 import { install } from 'npm-merge-driver-install';
 
 if (!isCI) {
-  install();
+  install(process.cwd());
 }
+```
+
+You can also pass options to the `install()` function:
+
+```js
+import { install } from 'npm-merge-driver-install';
+
+// Install with package.json conflict resolution
+install(process.cwd(), {
+  resolvePackageJson: 'ours' // or 'theirs'
+});
 ```
 
 then change the `prepare` script in package.json to

@@ -55,8 +55,8 @@ const uninstall = (cwd, options) => {
             .split(/\r?\n/)
             .filter((line) => !(line.match(RE) || line.match(RE2)))
             .join('\n');
-        } catch (_e) {
-          // some issue we cannot handle
+        } catch (error) {
+          logger.log(`Failed to read attributes file: ${error.message}`);
         }
 
         fs.writeFileSync(attrFile, attrContents);
