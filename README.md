@@ -11,6 +11,10 @@ single small dependency for ci checking.
 - [Supported Package Managers](#supported-package-managers)
   - [How It Works](#how-it-works)
 - [Installation](#installation)
+- [Automatic package.json Conflict Resolution](#automatic-packagejson-conflict-resolution)
+  - [How to Enable](#how-to-enable)
+  - [Resolution Strategies](#resolution-strategies)
+  - [How It Works](#how-it-works-1)
 - [I don't want it to install in ci](#i-dont-want-it-to-install-in-ci)
 - [Provided binaries](#provided-binaries)
 
@@ -58,6 +62,73 @@ then add a prepare script in package.json like the following:
 ```json
 {"prepare": "npm-merge-driver-install"}
 ```
+
+## Automatic package.json Conflict Resolution
+
+By default, this merge driver only handles lockfile conflicts. When package.json has conflicts during a merge,
+you must resolve them manually before the lockfile can be regenerated.
+
+You can optionally enable **automatic package.json conflict resolution** to handle these conflicts
+automatically using intelligent merge strategies.
+
+### How to Enable
+
+Enable this feature during installation by passing the `--resolve-package-json` flag:
+
+```bash
+# Enable with default 'ours' strategy (recommended)
+npm-merge-driver-install --resolve-package-json
+
+# Or specify the strategy explicitly
+npm-merge-driver-install --resolve-package-json=ours
+npm-merge-driver-install --resolve-package-json=theirs
+```
+
+Add this to your `prepare` script in package.json:
+
+```json
+{"prepare": "npm-merge-driver-install --resolve-package-json"}
+```
+
+### Resolution Strategies
+
+**`ours` (default, recommended)**
+
+- Prioritizes changes from your current branch
+- Applies your branch's changes on top of the incoming changes
+- Best for: feature branches being merged into main, most development workflows
+- Matches git's default merge behavior
+
+**`theirs`**
+
+- Prioritizes changes from the incoming branch
+- Applies incoming changes on top of your branch's changes
+- Best for: updating from upstream, pulling in dependency updates
+
+Both strategies use intelligent diff-based merging that attempts to preserve changes from both sides when
+possible. When conflicts cannot be automatically resolved (e.g., type mismatches), the strategy determines
+which version wins.
+
+### How It Works
+
+1. **During a merge**, if package.json has conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`):
+   - The merge driver automatically detects the conflicts
+   - Uses the configured strategy to intelligently resolve them
+   - Writes the resolved package.json
+   - Proceeds to regenerate the lockfile as normal
+
+2. **If automatic resolution fails**:
+   - Falls back to the standard behavior
+   - Exits with an error asking you to manually resolve package.json
+   - You can then fix conflicts and re-run your package manager
+
+3. **Configuration is stored** in git config:
+   - Stored as: `merge.npm-merge-driver-install.resolvePackageJson`
+   - Persists across merges for consistent behavior
+   - Can be changed by running the install command again with a different strategy
+
+**Note**: This feature uses the [parse-conflict-json](https://www.npmjs.com/package/parse-conflict-json) library,
+which only supports 'ours' and 'theirs' strategies (not 'parent' or 'union' strategies).
 
 ## I don't want it to install in ci
 

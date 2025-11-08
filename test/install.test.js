@@ -136,4 +136,100 @@ describe('install', () => {
     expect(result.stderr).toBe('');
     expect(result.stdout).toBe('npm-merge-driver-install: installed successfully\n');
   });
+
+  test('installs with --resolve-package-json flag (default ours)', async () => {
+    const result = await promiseSpawn('node', [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json'], {
+      cwd: context.dir,
+    });
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toBe('npm-merge-driver-install: installed successfully\n');
+
+    // Check that the config was set
+    const configResult = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(configResult.stdout.trim()).toBe('ours');
+  });
+
+  test('installs with --resolve-package-json=ours', async () => {
+    const result = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=ours'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(result.exitCode).toBe(0);
+
+    const configResult = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(configResult.stdout.trim()).toBe('ours');
+  });
+
+  test('installs with --resolve-package-json=theirs', async () => {
+    const result = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=theirs'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(result.exitCode).toBe(0);
+
+    const configResult = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(configResult.stdout.trim()).toBe('theirs');
+  });
+
+  test('rejects invalid --resolve-package-json value', async () => {
+    try {
+      await promiseSpawn('node', [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=invalid'], {
+        cwd: context.dir,
+      });
+      expect.fail('Should have thrown an error');
+    } catch (error) {
+      expect(error.message).toContain('Invalid --resolve-package-json value');
+    }
+  });
+
+  test('does not set resolvePackageJson config when flag not provided', async () => {
+    await promiseSpawn('node', [path.join(BASE_DIR, 'src', 'install.js')], { cwd: context.dir });
+
+    // Config key should not exist, so git config should fail
+    try {
+      await promiseSpawn(
+        'git',
+        // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+        ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+        {
+          cwd: context.dir,
+        },
+      );
+      expect.fail('Config key should not exist');
+    } catch (error) {
+      // Expected - config key doesn't exist
+      expect(error.message).toContain('failed with code 1');
+    }
+  });
 });

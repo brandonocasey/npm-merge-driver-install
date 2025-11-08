@@ -22,6 +22,17 @@ const uninstall = (cwd, options) => {
   // for full installs only
   if (rootDir) {
     // remove git config settings
+    // First try to unset individual keys in case remove-section fails
+    spawnSync(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', '--unset', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: rootDir,
+        env,
+      },
+    );
+
     spawnSync('git', ['config', '--local', '--remove-section', 'merge.npm-merge-driver-install'], {
       cwd: rootDir,
       env,

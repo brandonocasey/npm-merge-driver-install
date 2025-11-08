@@ -57,5 +57,8 @@
   },
   "overrides": {
     "rollup": "4.52.5"
+  },
+  "dependencies": {
+    "parse-conflict-json": "^3.0.1"
   }
 }

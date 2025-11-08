@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+import parseConflictJson from 'parse-conflict-json';
 import detectYarnVersion from './detect-yarn-version.js';
 import getRoot from './get-root.js';
 import { log } from './logger.js';
@@ -63,6 +64,50 @@ if (supportsTextMerge) {
   }
 } else {
   log(`${file} is binary format, skipping text-based merge`);
+}
+
+// Check if package.json conflict resolution is enabled and needed
+const packageJsonPath = path.join(path.dirname(file), 'package.json');
+const resolvePackageJsonConfig = spawnSync(
+  'git',
+  // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+  ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+  {
+    cwd: rootDir,
+    encoding: 'utf8',
+  },
+);
+
+if (resolvePackageJsonConfig.status === 0 && resolvePackageJsonConfig.stdout.trim()) {
+  const strategy = resolvePackageJsonConfig.stdout.trim();
+
+  log(`package.json conflict resolution is enabled with strategy: ${strategy}`);
+
+  if (fs.existsSync(packageJsonPath)) {
+    const packageJsonContent = fs.readFileSync(packageJsonPath, 'utf8');
+
+    // Check for conflict markers
+    if (
+      packageJsonContent.includes('<<<<<<<') &&
+      packageJsonContent.includes('=======') &&
+      packageJsonContent.includes('>>>>>>>')
+    ) {
+      log(`package.json has conflicts, attempting automatic resolution using '${strategy}' strategy`);
+
+      try {
+        const resolved = parseConflictJson(packageJsonContent, null, strategy);
+        fs.writeFileSync(packageJsonPath, `${JSON.stringify(resolved, null, 2)}\n`);
+        log(`package.json conflicts resolved successfully using '${strategy}' strategy`);
+      } catch (error) {
+        log(`ERROR: Failed to auto-resolve package.json conflicts: ${error.message}`);
+        log(
+          `ACTION REQUIRED: Manually resolve package.json conflicts, then run: ${pm.getExecutable()} ${pm.getMergeArgs().join(' ')}`,
+        );
+        console.log();
+        process.exit(1);
+      }
+    }
+  }
 }
 
 const executable = pm.getExecutable();

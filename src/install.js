@@ -11,7 +11,7 @@ import noop from './noop.js';
 import { getAllLockfilePatterns } from './package-managers.js';
 import uninstall from './uninstall.js';
 
-const configureGitMergeDriver = (rootDir, mergePath, env) => {
+const configureGitMergeDriver = (rootDir, mergePath, env, resolvePackageJson) => {
   const configOne = spawnSync(
     'git',
     ['config', '--local', 'merge.npm-merge-driver-install.name', 'automatically merge package manager lockfiles'],
@@ -23,7 +23,18 @@ const configureGitMergeDriver = (rootDir, mergePath, env) => {
     { cwd: rootDir, env },
   );
 
-  return configOne.status === 0 && configTwo.status === 0;
+  let configThree = { status: 0 };
+
+  if (resolvePackageJson) {
+    configThree = spawnSync(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson', resolvePackageJson],
+      { cwd: rootDir, env },
+    );
+  }
+
+  return configOne.status === 0 && configTwo.status === 0 && configThree.status === 0;
 };
 
 const updateGitAttributes = (attrFile, lockfilePatterns) => {
@@ -49,6 +60,7 @@ const install = (cwd, options) => {
   const env = options?.env || process.env;
   const getRoot_ = options?.getRoot || getRoot;
   const getGitDir_ = options?.getGitDir || getGitDir;
+  const resolvePackageJson = options?.resolvePackageJson;
   const rootDir = getRoot_(cwd, options);
 
   if (!rootDir) {
@@ -73,7 +85,7 @@ const install = (cwd, options) => {
   }
 
   // add to git config
-  if (!configureGitMergeDriver(rootDir, mergePath, env)) {
+  if (!configureGitMergeDriver(rootDir, mergePath, env, resolvePackageJson)) {
     logger.log('Failed to configure npm-merge-driver-install in git directory');
     return 1;
   }
@@ -96,7 +108,21 @@ export default install;
 const isMainModule = fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(process.argv[1]);
 
 if (isMainModule) {
-  const exitCode = install();
+  // Parse --resolve-package-json flag
+  let resolvePackageJson;
+  for (const arg of process.argv.slice(2)) {
+    if (arg === '--resolve-package-json') {
+      resolvePackageJson = 'ours';
+    } else if (arg.startsWith('--resolve-package-json=')) {
+      resolvePackageJson = arg.split('=')[1];
+      if (resolvePackageJson !== 'ours' && resolvePackageJson !== 'theirs') {
+        log(`Invalid --resolve-package-json value: ${resolvePackageJson}. Must be 'ours' or 'theirs'.`);
+        process.exit(1);
+      }
+    }
+  }
+
+  const exitCode = install(process.cwd(), { resolvePackageJson });
 
   process.exit(exitCode);
 }
