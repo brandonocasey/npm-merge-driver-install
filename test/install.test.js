@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -231,5 +232,135 @@ describe('install', () => {
       // Expected - config key doesn't exist
       expect(error.message).toContain('failed with code 1');
     }
+  });
+
+  test('can change resolution strategy by reinstalling', async () => {
+    // First install with 'ours'
+    const result1 = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=ours'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(result1.exitCode).toBe(0);
+
+    const config1 = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(config1.stdout.trim()).toBe('ours');
+
+    // Reinstall with 'theirs'
+    const result2 = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=theirs'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(result2.exitCode).toBe(0);
+
+    const config2 = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(config2.stdout.trim()).toBe('theirs');
+  });
+
+  test('can install multiple times with --resolve-package-json', async () => {
+    // First install
+    const result1 = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=ours'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(result1.exitCode).toBe(0);
+    expect(isInstalled(context.dir)).toBe(true);
+
+    // Second install with same strategy
+    const result2 = await promiseSpawn(
+      'node',
+      [path.join(BASE_DIR, 'src', 'install.js'), '--resolve-package-json=ours'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(result2.exitCode).toBe(0);
+    expect(isInstalled(context.dir)).toBe(true);
+
+    // Config should still be 'ours'
+    const config = await promiseSpawn(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+      },
+    );
+    expect(config.stdout.trim()).toBe('ours');
+  });
+
+  test('can install via API with resolvePackageJson option', () => {
+    const exitCode = context.install({ resolvePackageJson: 'theirs' });
+
+    expect(isInstalled(context.dir)).toBe(true);
+    expect(exitCode).toBe(0);
+
+    // Verify config was set via API call
+    const result = spawnSync(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+        encoding: 'utf8',
+      },
+    );
+    expect(result.stdout.trim()).toBe('theirs');
+  });
+
+  test('can change strategy via API', () => {
+    // First install with 'ours'
+    const exitCode1 = context.install({ resolvePackageJson: 'ours' });
+
+    expect(exitCode1).toBe(0);
+
+    const result1 = spawnSync(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+        encoding: 'utf8',
+      },
+    );
+    expect(result1.stdout.trim()).toBe('ours');
+
+    // Reinstall with 'theirs'
+    const exitCode2 = context.install({ resolvePackageJson: 'theirs' });
+
+    expect(exitCode2).toBe(0);
+
+    const result2 = spawnSync(
+      'git',
+      // biome-ignore lint/security/noSecrets: False positive - this is a git config key, not a secret
+      ['config', '--local', 'merge.npm-merge-driver-install.resolvePackageJson'],
+      {
+        cwd: context.dir,
+        encoding: 'utf8',
+      },
+    );
+    expect(result2.stdout.trim()).toBe('theirs');
   });
 });
