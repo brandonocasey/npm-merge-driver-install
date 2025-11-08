@@ -28,14 +28,16 @@ describe('get-root', () => {
     const result = getRoot(context.dir);
 
     expect(result).toBeTruthy();
-    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
+    // Use path.resolve to normalize both paths for comparison (handles Windows short vs long paths)
+    expect(path.resolve(result)).toBe(path.resolve(context.dir));
   });
 
   test('can find root dir from sub directory', () => {
     const result = getRoot(path.join(context.dir, 'subdir'));
 
     expect(result).toBeTruthy();
-    expect(fs.realpathSync(result)).toBe(fs.realpathSync(context.dir));
+    // Use path.resolve to normalize both paths for comparison (handles Windows short vs long paths)
+    expect(path.resolve(result)).toBe(path.resolve(context.dir));
   });
 
   test('no root dir without .git', () => {

@@ -24,23 +24,23 @@ const promiseSpawn = (bin, args, options = {}) => {
   options.env = options.env || {};
   options.env.PATH = options.env.PATH || process.env.PATH;
 
-  // On Windows, append .cmd/.exe extensions for npm/yarn/pnpm commands
-  // This allows Node.js to find them without requiring shell: true
+  // On Windows, .cmd files need shell: true because they're batch scripts
+  // When using shell: true, pass command as first arg and empty array to avoid deprecation
   let spawnBin = bin;
-  const spawnArgs = args;
+  let spawnArgs = args;
 
   if (os.platform() === 'win32') {
-    // Common package manager commands that need .cmd extension on Windows
-    const needsCmdExtension = ['npm', 'yarn', 'pnpm', 'yarn-classic', 'yarn-berry'];
-    if (needsCmdExtension.includes(bin)) {
-      spawnBin = `${bin}.cmd`;
-    } else if (bin === 'bun') {
-      spawnBin = 'bun.exe';
-    } else if (bin === 'deno') {
-      spawnBin = 'deno.exe';
+    // Commands that are .cmd batch files on Windows (package managers)
+    // Only these specific commands need shell: true
+    const cmdBatchFiles = ['npm', 'npx', 'yarn', 'pnpm', 'bun', 'yarn-classic', 'yarn-berry'];
+
+    if (cmdBatchFiles.includes(bin)) {
+      // For .cmd files on Windows: pass full command as single string with shell: true
+      // This avoids the deprecation warning about passing args separately
+      spawnBin = `${bin} ${args.join(' ')}`;
+      spawnArgs = [];
+      options.shell = true;
     }
-    // For other commands or if they already have an extension, use as-is
-    // Node.js spawn can handle them without shell: true
   }
 
   return new Promise((resolve, reject) => {
