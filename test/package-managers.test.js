@@ -46,42 +46,49 @@ describe('packageManagers', () => {
     expect(pm.name).toBe('npm');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns correct package manager for pnpm', () => {
     const pm = getPackageManagerByLockfile('pnpm-lock.yaml');
 
     expect(pm.name).toBe('pnpm');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns correct package manager for yarn', () => {
     const pm = getPackageManagerByLockfile('yarn.lock');
 
     expect(pm.name).toBe('yarn-classic');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns correct package manager for bun', () => {
     const pm = getPackageManagerByLockfile('bun.lock');
 
     expect(pm.name).toBe('bun');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns correct package manager for deno', () => {
     const pm = getPackageManagerByLockfile('deno.lock');
 
     expect(pm.name).toBe('deno');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile handles paths with directories', () => {
     const pm = getPackageManagerByLockfile('/path/to/package-lock.json');
 
     expect(pm.name).toBe('npm');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile returns null for unknown lockfile', () => {
     const pm = getPackageManagerByLockfile('unknown.lock');
 
     expect(pm).toBe(null);
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getAllLockfilePatterns returns all lockfile patterns', () => {
     const patterns = getAllLockfilePatterns();
 
@@ -191,12 +198,14 @@ describe('packageManagers', () => {
     expect(args).toEqual(['cache', '--reload']);
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile handles Windows-style paths', () => {
     const pm = getPackageManagerByLockfile('C:\\path\\to\\package-lock.json');
 
     expect(pm.name).toBe('npm');
   });
 
+  // biome-ignore lint/security/noSecrets: test name is not a secret
   test('getPackageManagerByLockfile handles npm-shrinkwrap.json', () => {
     const pm = getPackageManagerByLockfile('npm-shrinkwrap.json');
 
