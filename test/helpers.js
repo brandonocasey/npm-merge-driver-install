@@ -17,6 +17,35 @@ const TEMP_DIR = os.tmpdir();
 const getTempDir = () => path.join(TEMP_DIR, uuidv4());
 
 /**
+ * Installs this package (via install-local) into the given directory. Used both
+ * per-test and for one-time template setup so the heavy pack+install can be shared.
+ *
+ * @param {string} dir - Directory to install the local package into
+ * @param {object} env - Extra environment variables for the install process
+ * @returns {Promise<{exitCode: number, stdout: string, stderr: string}>}
+ */
+const installLocalPackage = (dir, env = {}) => promiseSpawn('node', [installLocalBin, BASE_DIR], { cwd: dir, env });
+
+/**
+ * Creates a fresh, isolated working directory from a prepared template and
+ * registers the merge driver in it. Each call returns a unique directory so
+ * tests can run concurrently without sharing state. The merge driver is
+ * registered per directory because it writes the per-directory merge.js path
+ * into .git/config.
+ *
+ * @param {string} template - Path to the template directory to copy from
+ * @returns {Promise<string>} Path to the prepared, isolated directory
+ */
+const prepareRepoFromTemplate = async (template) => {
+  const dir = getTempDir();
+
+  fs.cpSync(template, dir, { recursive: true });
+  await promiseSpawn('npx', ['--no-install', 'npm-merge-driver-install'], { cwd: dir });
+
+  return dir;
+};
+
+/**
  * Kills a process tree on Windows/WSL to prevent hanging processes
  * that can hold file locks and cause EBUSY errors.
  *
@@ -215,7 +244,7 @@ const sharedHooks = {
     context.dir = getTempDir();
     fs.cpSync(context.template, context.dir, { recursive: true });
 
-    context.installPackage = (env = {}) => promiseSpawn('node', [installLocalBin, BASE_DIR], { cwd: context.dir, env });
+    context.installPackage = (env = {}) => installLocalPackage(context.dir, env);
 
     context.fakegit = () => {
       // put the tempdir path as highest priorty in PATH
@@ -261,4 +290,4 @@ const sharedHooks = {
   },
 };
 
-export { BASE_DIR, promiseSpawn, sharedHooks };
+export { BASE_DIR, installLocalPackage, prepareRepoFromTemplate, promiseSpawn, sharedHooks };
